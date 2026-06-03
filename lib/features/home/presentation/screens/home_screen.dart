@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
@@ -18,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(child: _buildHeader(context, name)),
           SliverPadding(
@@ -60,6 +61,11 @@ class HomeScreen extends ConsumerWidget {
       decoration: const BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        image: DecorationImage(
+          image: AssetImage('assets/images/header_bg.jpg'),
+          fit: BoxFit.cover,
+          opacity: 0.3,
+        ),
       ),
       padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 24),
       child: Column(
@@ -67,14 +73,14 @@ class HomeScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
                 ),
-                child: Icon(Iconsax.music5, color: Colors.white, size: 18),
               ),
               const SizedBox(width: 10),
               Text(
@@ -82,27 +88,50 @@ class HomeScreen extends ConsumerWidget {
                 style: AppTextStyles.headlineMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
-              Stack(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+              GestureDetector(
+                onTap: () => _showNotifications(context),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: FaIcon(FontAwesomeIcons.bell, color: Colors.white, size: 19),
                     ),
-                    child: Icon(Iconsax.notification, color: Colors.white, size: 20),
-                  ),
-                  Positioned(
-                    right: 9,
-                    top: 9,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                    Positioned(
+                      right: -5,
+                      top: -5,
+                      child: Container(
+                        width: 19,
+                        height: 19,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF97316),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.primary, width: 1.5),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          '3',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            height: 1,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -129,9 +158,9 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     Text('Tiến độ học tập', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
                     const Spacer(),
-                    _statBadge('🔥', '7', 'streak'),
+                    _statBadge(FontAwesomeIcons.fire, '7', 'streak', const Color(0xFFF97316)),
                     const SizedBox(width: 12),
-                    _statBadge('⚡', '230', 'XP'),
+                    _statBadge(FontAwesomeIcons.bolt, '230', 'XP', const Color(0xFFF59E0B)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -159,11 +188,183 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _statBadge(String emoji, String value, String label) {
+  void _showNotifications(BuildContext context) {
+    final notifications = [
+      _NotifItem(
+        icon: FontAwesomeIcons.book,
+        iconColor: AppColors.primary,
+        title: 'Bài học mới đã được thêm',
+        body: 'Đàn Tranh nâng cao — Chương 3 vừa ra mắt',
+        time: '5 phút trước',
+        unread: true,
+      ),
+      _NotifItem(
+        icon: FontAwesomeIcons.fire,
+        iconColor: const Color(0xFFF97316),
+        title: 'Streak 7 ngày!',
+        body: 'Tuyệt vời! Bạn đang giữ vững phong độ luyện tập',
+        time: '2 giờ trước',
+        unread: true,
+      ),
+      _NotifItem(
+        icon: FontAwesomeIcons.clock,
+        iconColor: const Color(0xFF6366F1),
+        title: 'Nhắc nhở học nhạc',
+        body: 'Đã đến giờ luyện tập hàng ngày của bạn',
+        time: '5 giờ trước',
+        unread: true,
+      ),
+      _NotifItem(
+        icon: FontAwesomeIcons.trophy,
+        iconColor: const Color(0xFFF59E0B),
+        title: 'Hoàn thành bài học',
+        body: 'Bạn đã hoàn thành Sáo Trúc cơ bản — Chương 1',
+        time: 'Hôm qua',
+        unread: false,
+      ),
+      _NotifItem(
+        icon: FontAwesomeIcons.crown,
+        iconColor: const Color(0xFF1565C0),
+        title: 'Ưu đãi Premium',
+        body: 'Nâng cấp hôm nay để nhận 30 ngày dùng thử miễn phí',
+        time: '2 ngày trước',
+        unread: false,
+      ),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Text('Thông báo', style: AppTextStyles.headlineMedium),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Text(
+                        'Đánh dấu tất cả đã đọc',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: notifications.length,
+                  separatorBuilder: (context, i) => const Divider(
+                    height: 1,
+                    indent: 68,
+                    endIndent: 20,
+                  ),
+                  itemBuilder: (_, i) {
+                    final n = notifications[i];
+                    return Container(
+                      color: n.unread
+                          ? AppColors.primary.withValues(alpha: 0.04)
+                          : Colors.transparent,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: n.iconColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: FaIcon(n.icon, color: n.iconColor, size: 17),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        n.title,
+                                        style: AppTextStyles.labelMedium.copyWith(
+                                          fontWeight: n.unread ? FontWeight.w700 : FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    if (n.unread)
+                                      Container(
+                                        width: 7,
+                                        height: 7,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFF97316),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(n.body, style: AppTextStyles.bodySmall),
+                                const SizedBox(height: 4),
+                                Text(
+                                  n.time,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statBadge(FaIconData icon, String value, String label, Color color) {
     return Row(
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 14)),
-        const SizedBox(width: 2),
+        FaIcon(icon, color: color, size: 13),
+        const SizedBox(width: 4),
         Text(value, style: AppTextStyles.labelMedium.copyWith(color: Colors.white)),
         const SizedBox(width: 2),
         Text(label, style: AppTextStyles.bodySmall.copyWith(color: Colors.white60, fontSize: 10)),
@@ -187,7 +388,8 @@ class HomeScreen extends ConsumerWidget {
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Iconsax.medal_star, color: Colors.white, size: 22),
+            alignment: Alignment.center,
+            child: FaIcon(FontAwesomeIcons.medal, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -206,7 +408,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(width: 10),
           ElevatedButton.icon(
             onPressed: () => context.go('/practice'),
-            icon: Icon(Iconsax.play5, size: 14),
+            icon: FaIcon(FontAwesomeIcons.play, size: 14),
             label: const Text('Bắt đầu'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryLight,
@@ -231,11 +433,21 @@ class HomeScreen extends ConsumerWidget {
         if (onTap != null)
           GestureDetector(
             onTap: onTap,
-            child: Row(
-              children: [
-                Text('Xem tất cả', style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary, fontSize: 13)),
-                Icon(Iconsax.arrow_right_3, size: 14, color: AppColors.primary),
-              ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.35), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Xem tất cả', style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary, fontSize: 12)),
+                  const SizedBox(width: 5),
+                  FaIcon(FontAwesomeIcons.arrowRight, size: 11, color: AppColors.primary),
+                ],
+              ),
             ),
           ),
       ],
@@ -266,7 +478,8 @@ class HomeScreen extends ConsumerWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
-                child: Icon(Iconsax.play5, color: Colors.white, size: 22),
+                alignment: Alignment.center,
+                child: FaIcon(FontAwesomeIcons.play, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -320,7 +533,7 @@ class HomeScreen extends ConsumerWidget {
               Image.network(
                 inst.imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, _, _e) => Container(color: AppColors.primary),
+                errorBuilder: (_, _, _) => Container(color: AppColors.primary),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -364,7 +577,8 @@ class HomeScreen extends ConsumerWidget {
                   width: 36,
                   height: 36,
                   decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: Icon(Iconsax.arrow_right_3, color: Colors.white, size: 18),
+                  alignment: Alignment.center,
+                  child: FaIcon(FontAwesomeIcons.arrowRight, color: Colors.white, size: 18),
                 ),
               ),
             ],
@@ -436,9 +650,9 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildAchievements() {
     final items = [
-      {'icon': '🔥', 'label': '7 ngày liên tiếp'},
-      {'icon': '⭐', 'label': 'Nhạc cụ đầu tiên'},
-      {'icon': '🏆', 'label': 'Hoàn thành 5 bài'},
+      (FontAwesomeIcons.fire, '7 ngày liên tiếp', const Color(0xFFF97316)),
+      (FontAwesomeIcons.star, 'Nhạc cụ đầu tiên', const Color(0xFFF59E0B)),
+      (FontAwesomeIcons.trophy, 'Hoàn thành 5 bài', AppColors.primary),
     ];
     return Row(
       children: items.asMap().entries.map((entry) {
@@ -455,10 +669,10 @@ class HomeScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                Text(item['icon']!, style: const TextStyle(fontSize: 28)),
+                FaIcon(item.$1, color: item.$3, size: 26),
                 const SizedBox(height: 6),
                 Text(
-                  item['label']!,
+                  item.$2,
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
                   maxLines: 2,
@@ -489,7 +703,8 @@ class HomeScreen extends ConsumerWidget {
                 color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Iconsax.document_text5, color: Colors.white, size: 22),
+              alignment: Alignment.center,
+              child: FaIcon(FontAwesomeIcons.fileLines, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -505,7 +720,7 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            Icon(Iconsax.arrow_right_3, color: Colors.white70, size: 18),
+            FaIcon(FontAwesomeIcons.arrowRight, color: Colors.white70, size: 18),
           ],
         ),
       ),
@@ -529,7 +744,8 @@ class HomeScreen extends ConsumerWidget {
               color: AppColors.surfaceElevated,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Iconsax.clock, color: AppColors.primary, size: 22),
+            alignment: Alignment.center,
+            child: FaIcon(FontAwesomeIcons.clock, color: AppColors.primary, size: 22),
           ),
           const SizedBox(width: 14),
           Column(
@@ -556,4 +772,21 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _NotifItem {
+  final FaIconData icon;
+  final Color iconColor;
+  final String title;
+  final String body;
+  final String time;
+  final bool unread;
+  const _NotifItem({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.body,
+    required this.time,
+    required this.unread,
+  });
 }

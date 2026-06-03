@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 
 class MainShell extends StatelessWidget {
   final Widget child;
-
   const MainShell({super.key, required this.child});
 
-  static final _tabs = [
-    _TabItem(icon: Iconsax.home_15, label: 'Trang chủ', path: '/'),
-    _TabItem(icon: Iconsax.book_15, label: 'Học', path: '/learn'),
-    _TabItem(icon: Iconsax.music5, label: 'Luyện tập', path: '/practice'),
-    _TabItem(icon: Iconsax.music_playlist, label: 'Bản nhạc', path: '/sheets'),
-    _TabItem(icon: Iconsax.user5, label: 'Hồ sơ', path: '/profile'),
+  static const _tabs = [
+    _TabItem(icon: FontAwesomeIcons.house, label: 'Trang chủ', path: '/'),
+    _TabItem(icon: FontAwesomeIcons.book, label: 'Học', path: '/learn'),
+    _TabItem(icon: FontAwesomeIcons.music, label: 'Luyện tập', path: '/practice'),
+    _TabItem(icon: FontAwesomeIcons.listUl, label: 'Bản nhạc', path: '/sheets'),
+    _TabItem(icon: FontAwesomeIcons.user, label: 'Hồ sơ', path: '/profile'),
   ];
 
   int _selectedIndex(BuildContext context) {
@@ -63,14 +62,14 @@ class MainShell extends StatelessWidget {
 }
 
 class _TabItem {
-  final IconData icon;
+  final FaIconData icon;
   final String label;
   final String path;
   const _TabItem({required this.icon, required this.label, required this.path});
 }
 
 class _NavItem extends StatelessWidget {
-  final IconData icon;
+  final FaIconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
@@ -97,10 +96,10 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            FaIcon(
               icon,
               color: isSelected ? AppColors.primary : AppColors.textMuted,
-              size: 24,
+              size: 22,
             ),
             const SizedBox(height: 2),
             Text(

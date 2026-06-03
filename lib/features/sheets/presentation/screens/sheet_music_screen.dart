@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 
@@ -11,194 +11,428 @@ class SheetMusicScreen extends StatefulWidget {
 }
 
 class _SheetMusicScreenState extends State<SheetMusicScreen> {
-  String _selectedFilter = 'Tất cả';
-  final _filters = ['Tất cả', 'Cơ bản', 'Trung cấp', 'Nâng cao'];
-  final _searchController = TextEditingController();
+  String _genre = 'Tất cả';
+  String _difficulty = 'Tất cả';
+  final _searchCtrl = TextEditingController();
 
-  final _sheets = const [
-    _SheetData(title: 'Lý con sáo', instrument: 'Sáo Trúc', level: 'Cơ bản', emoji: '🎋'),
-    _SheetData(title: 'Bèo dạt mây trôi', instrument: 'Đàn Tranh', level: 'Trung cấp', emoji: '🎵'),
-    _SheetData(title: 'Lưu thủy hành vân', instrument: 'Đàn Nguyệt', level: 'Nâng cao', emoji: '🌙'),
-    _SheetData(title: 'Ly con sáo sang sông', instrument: 'Đàn Bầu', level: 'Trung cấp', emoji: '🎶'),
-    _SheetData(title: 'Tiếng đàn bầu', instrument: 'Đàn Bầu', level: 'Cơ bản', emoji: '🎶'),
-    _SheetData(title: 'Trống hội', instrument: 'Trống Cơm', level: 'Cơ bản', emoji: '🥁'),
-    _SheetData(title: 'Xuân về trên bản', instrument: 'Đàn Tranh', level: 'Trung cấp', emoji: '🎵'),
-    _SheetData(title: 'Đà cổ hoài lang', instrument: 'Đàn Nguyệt', level: 'Nâng cao', emoji: '🌙'),
+  final _genres = ['Tất cả', 'Dân ca', 'Vọng cổ', 'Nhạc mới', 'Nhạc cổ'];
+  final _difficulties = ['Tất cả', 'Dễ', 'Trung bình', 'Khó'];
+
+  static const _sheets = [
+    _Sheet(title: 'Lý Con Sáo', author: 'Dân ca Nam Bộ', genre: 'Dân ca', difficulty: 'Dễ', pages: 2, isPremium: false),
+    _Sheet(title: 'Dạ Cổ Hoài Lang', author: 'Cao Văn Lầu', genre: 'Vọng cổ', difficulty: 'Trung bình', pages: 4, isPremium: false),
+    _Sheet(title: 'Bèo Dạt Mây Trôi', author: 'Dân ca Bắc Bộ', genre: 'Dân ca', difficulty: 'Dễ', pages: 3, isPremium: true),
+    _Sheet(title: 'Tiếng Đàn Bầu', author: 'Nguyễn Đình Phúc', genre: 'Nhạc mới', difficulty: 'Trung bình', pages: 3, isPremium: true),
+    _Sheet(title: 'Thủy Hành Vân', author: 'Nhạc lễ Nam Bộ', genre: 'Nhạc cổ', difficulty: 'Khó', pages: 6, isPremium: true),
+    _Sheet(title: 'Trống Cơm', author: 'Dân ca Quan họ', genre: 'Dân ca', difficulty: 'Dễ', pages: 2, isPremium: false),
+    _Sheet(title: 'Xuân Về Trên Bản', author: 'Hoàng Việt', genre: 'Nhạc mới', difficulty: 'Trung bình', pages: 4, isPremium: true),
+    _Sheet(title: 'Lý Ngựa Ô', author: 'Dân ca Bắc Bộ', genre: 'Dân ca', difficulty: 'Dễ', pages: 2, isPremium: false),
   ];
 
-  List<_SheetData> get _filtered {
-    var result = _sheets;
-    if (_selectedFilter != 'Tất cả') result = result.where((s) => s.level == _selectedFilter).toList();
-    final query = _searchController.text.toLowerCase();
-    if (query.isNotEmpty) result = result.where((s) => s.title.toLowerCase().contains(query) || s.instrument.toLowerCase().contains(query)).toList();
-    return result;
+  List<_Sheet> get _filtered {
+    return _sheets.where((s) {
+      final matchGenre = _genre == 'Tất cả' || s.genre == _genre;
+      final matchDiff = _difficulty == 'Tất cả' || s.difficulty == _difficulty;
+      final q = _searchCtrl.text.toLowerCase();
+      final matchSearch = q.isEmpty || s.title.toLowerCase().contains(q) || s.author.toLowerCase().contains(q);
+      return matchGenre && matchDiff && matchSearch;
+    }).toList();
   }
+
+  int get _freeCount => _sheets.where((s) => !s.isPremium).length;
+  int get _premiumCount => _sheets.where((s) => s.isPremium).length;
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        title: Text('Bản nhạc', style: AppTextStyles.headlineLarge),
-      ),
-      body: Column(
-        children: [
-          _buildSearch(),
-          _buildFilters(),
-          Expanded(child: _buildSheetList()),
+      backgroundColor: AppColors.surface,
+      body: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(child: _buildHeader(context)),
+          SliverToBoxAdapter(child: _buildGenreFilters()),
+          SliverToBoxAdapter(child: _buildDifficultyFilters()),
+          _buildGrid(),
+          SliverToBoxAdapter(child: _buildUpdateBanner()),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
   }
 
-  Widget _buildSearch() {
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        image: DecorationImage(
+          image: AssetImage('assets/images/header_bg.jpg'),
+          fit: BoxFit.cover,
+          opacity: 0.3,
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset('assets/images/logo.png', width: 36, height: 36, fit: BoxFit.cover),
+              ),
+              const SizedBox(width: 10),
+              Text('Folkify', style: AppTextStyles.headlineMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              FaIcon(FontAwesomeIcons.fileLines, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text('Sheet nhạc', style: AppTextStyles.headlineLarge.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$_freeCount miễn phí · $_premiumCount premium',
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.75)),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                FaIcon(FontAwesomeIcons.magnifyingGlass, color: AppColors.primary, size: 15),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (_) => setState(() {}),
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Tìm bài nhạc, tác giả...',
+                      hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                if (_searchCtrl.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () { _searchCtrl.clear(); setState(() {}); },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: FaIcon(FontAwesomeIcons.circleXmark, color: AppColors.textMuted, size: 16),
+                    ),
+                  )
+                else
+                  const SizedBox(width: 14),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGenreFilters() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (_) => setState(() {}),
-        style: AppTextStyles.bodyLarge,
-        decoration: InputDecoration(
-          hintText: 'Tìm kiếm bản nhạc...',
-          prefixIcon: Icon(Iconsax.search_normal, color: AppColors.textMuted),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: Icon(Iconsax.close_square, color: AppColors.textMuted),
-                  onPressed: () { _searchController.clear(); setState(() {}); },
-                )
-              : null,
+      padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
+      child: SizedBox(
+        height: 36,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _genres.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            final g = _genres[i];
+            final selected = _genre == g;
+            return GestureDetector(
+              onTap: () => setState(() => _genre = g),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: selected ? AppColors.primary : AppColors.border),
+                ),
+                child: Text(g, style: AppTextStyles.bodySmall.copyWith(
+                  color: selected ? Colors.white : AppColors.textSecondary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                )),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildFilters() {
-    return SizedBox(
-      height: 48,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        scrollDirection: Axis.horizontal,
-        itemCount: _filters.length,
-        separatorBuilder: (_, i) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final f = _filters[index];
-          final isSelected = _selectedFilter == f;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedFilter = f),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
+  Widget _buildDifficultyFilters() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 0, 16),
+      child: SizedBox(
+        height: 36,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _difficulties.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            final d = _difficulties[i];
+            final selected = _difficulty == d;
+            return GestureDetector(
+              onTap: () => setState(() => _difficulty = d),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: selected ? AppColors.primary : AppColors.border),
+                ),
+                child: Text(d, style: AppTextStyles.bodySmall.copyWith(
+                  color: selected ? Colors.white : AppColors.textSecondary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                )),
               ),
-              child: Text(f, style: AppTextStyles.labelMedium.copyWith(
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              )),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildSheetList() {
-    final filtered = _filtered;
-    if (filtered.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🎼', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            Text('Không tìm thấy bản nhạc', style: AppTextStyles.bodyMedium),
-          ],
+  Widget _buildGrid() {
+    final sheets = _filtered;
+    if (sheets.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 60),
+          child: Center(
+            child: Column(
+              children: [
+                FaIcon(FontAwesomeIcons.music, color: AppColors.textMuted, size: 48),
+                const SizedBox(height: 12),
+                Text('Không tìm thấy bản nhạc', style: AppTextStyles.bodyMedium),
+              ],
+            ),
+          ),
         ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-      itemCount: filtered.length,
-      separatorBuilder: (_, i) => const SizedBox(height: 10),
-      itemBuilder: (context, index) => _SheetCard(sheet: filtered[index]),
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate(
+          (_, i) => _SheetCard(sheet: sheets[i]),
+          childCount: sheets.length,
+        ),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.62,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpdateBanner() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          FaIcon(FontAwesomeIcons.calendar, color: Colors.white.withValues(alpha: 0.9), size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Cập nhật định kỳ', style: AppTextStyles.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  'Thư viện sheet nhạc được bổ sung hàng tuần với các bản nhạc dân tộc và hiện đại.',
+                  style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.8)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SheetData {
+class _Sheet {
   final String title;
-  final String instrument;
-  final String level;
-  final String emoji;
-  const _SheetData({required this.title, required this.instrument, required this.level, required this.emoji});
+  final String author;
+  final String genre;
+  final String difficulty;
+  final int pages;
+  final bool isPremium;
+  const _Sheet({
+    required this.title, required this.author, required this.genre,
+    required this.difficulty, required this.pages, required this.isPremium,
+  });
 }
 
 class _SheetCard extends StatelessWidget {
-  final _SheetData sheet;
+  final _Sheet sheet;
   const _SheetCard({required this.sheet});
 
-  Color get _levelColor => switch (sheet.level) {
-    'Cơ bản' => AppColors.success,
-    'Trung cấp' => AppColors.warning,
-    _ => AppColors.error,
+  Color get _diffColor => switch (sheet.difficulty) {
+    'Dễ' => const Color(0xFF16A34A),
+    'Trung bình' => const Color(0xFFD97706),
+    _ => const Color(0xFFDC2626),
   };
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border, width: 0.5),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(child: Text(sheet.emoji, style: const TextStyle(fontSize: 24))),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(sheet.title, style: AppTextStyles.titleMedium),
-                const SizedBox(height: 3),
-                Text(sheet.instrument, style: AppTextStyles.bodySmall),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Sheet preview image
+          Stack(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _levelColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(sheet.level, style: AppTextStyles.bodySmall.copyWith(color: _levelColor, fontWeight: FontWeight.w600, fontSize: 10)),
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                child: _SheetPreview(),
               ),
-              const SizedBox(height: 8),
-              Icon(Iconsax.document5, color: AppColors.primary, size: 22),
+              if (sheet.isPremium)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const FaIcon(FontAwesomeIcons.crown, color: Colors.white, size: 10),
+                        const SizedBox(width: 4),
+                        Text('Premium', style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.w600, fontSize: 10,
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
+          // Info
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(sheet.title, style: AppTextStyles.titleMedium.copyWith(fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(sheet.author, style: AppTextStyles.bodySmall.copyWith(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _diffColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(sheet.difficulty, style: AppTextStyles.bodySmall.copyWith(
+                          color: _diffColor, fontWeight: FontWeight.w600, fontSize: 10,
+                        )),
+                      ),
+                      const SizedBox(width: 6),
+                      Text('${sheet.pages} trang', style: AppTextStyles.bodySmall.copyWith(fontSize: 10, color: AppColors.textMuted)),
+                    ],
+                  ),
+                  const Spacer(),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      icon: FaIcon(
+                        sheet.isPremium ? FontAwesomeIcons.lock : FontAwesomeIcons.download,
+                        size: 11, color: Colors.white,
+                      ),
+                      label: Text(sheet.isPremium ? 'Mở khóa' : 'Tải về'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: sheet.isPremium ? const Color(0xFFF59E0B) : AppColors.primaryDark,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        textStyle: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600, fontSize: 11),
+                        minimumSize: Size.zero,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+// Placeholder trông như tờ sheet nhạc
+class _SheetPreview extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 140,
+      width: double.infinity,
+      color: const Color(0xFFF8F9FA),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(8, (i) => Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          height: 1.5,
+          width: double.infinity,
+          color: Colors.black.withValues(alpha: i % 4 == 0 ? 0.25 : 0.1),
+        )),
       ),
     );
   }

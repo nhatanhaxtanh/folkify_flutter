@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthState {
   final bool isLoggedIn;
@@ -66,6 +67,23 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> register(String name, String email, String password) async {
     // TODO: replace with real API call
     await Future.delayed(const Duration(milliseconds: 800));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyLoggedIn, true);
+    await prefs.setString(_keyUserEmail, email);
+    await prefs.setString(_keyUserName, name);
+    state = AuthState(isLoggedIn: true, userEmail: email, userName: name);
+    return true;
+  }
+
+  Future<bool> loginWithGoogle() async {
+    final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+    final account = await googleSignIn.signIn();
+    if (account == null) return false; // user cancelled
+
+    final name = account.displayName ?? account.email.split('@').first;
+    final email = account.email;
+
+    // TODO: gửi account.authentication idToken lên backend để verify + lấy JWT
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyLoggedIn, true);
     await prefs.setString(_keyUserEmail, email);

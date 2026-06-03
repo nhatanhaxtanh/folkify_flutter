@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../data/instruments_data.dart';
@@ -14,6 +14,7 @@ class LearnScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(child: _buildHeader(context)),
           SliverPadding(
@@ -42,6 +43,11 @@ class LearnScreen extends StatelessWidget {
       decoration: const BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        image: DecorationImage(
+          image: AssetImage('assets/images/header_bg.jpg'),
+          fit: BoxFit.cover,
+          opacity: 0.3,
+        ),
       ),
       padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 24),
       child: Column(
@@ -49,14 +55,14 @@ class LearnScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
                 ),
-                child: Icon(Iconsax.music5, color: Colors.white, size: 18),
               ),
               const SizedBox(width: 10),
               Text(
@@ -68,7 +74,7 @@ class LearnScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Text('📖', style: TextStyle(fontSize: 22)),
+              FaIcon(FontAwesomeIcons.book, color: Colors.white, size: 22),
               const SizedBox(width: 8),
               Text(
                 'Học',
@@ -77,7 +83,7 @@ class LearnScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text('Khám phá nhạc cụ dân tộc Việt Nam', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryLight)),
+          Text('Khám phá nhạc cụ dân tộc Việt Nam', style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.75))),
         ],
       ),
     );
@@ -101,7 +107,7 @@ class LearnScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Lộ trình học từ Beginner → Advanced, kết hợp video bài giảng và sheet nhạc tương ứng.',
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryLight),
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.75)),
           ),
         ],
       ),
@@ -140,8 +146,8 @@ class _InstrumentCard extends StatelessWidget {
                     if (intermediateCount > 0) _levelBadge('$intermediateCount Intermediate', const Color(0xFFD97706)),
                     const Spacer(),
                     Row(
-                      children: List.generate(5, (i) => Icon(
-                        i < instrument.difficulty ? Iconsax.star5 : Iconsax.star,
+                      children: List.generate(5, (i) => FaIcon(
+                        i < instrument.difficulty ? FontAwesomeIcons.star : FontAwesomeIcons.star,
                         size: 14,
                         color: i < instrument.difficulty ? const Color(0xFFF59E0B) : AppColors.border,
                       )),
@@ -190,7 +196,7 @@ class _InstrumentCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Iconsax.music5, color: Colors.white, size: 14),
+                        FaIcon(FontAwesomeIcons.music, color: Colors.white, size: 14),
                         const SizedBox(width: 6),
                         Text(
                           instrument.name,

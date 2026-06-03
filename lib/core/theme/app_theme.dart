@@ -21,7 +21,7 @@ class AppTheme {
         outline: AppColors.border,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      textTheme: GoogleFonts.beVietnamProTextTheme(ThemeData.light().textTheme),
+      textTheme: GoogleFonts.baloo2TextTheme(ThemeData.light().textTheme),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,

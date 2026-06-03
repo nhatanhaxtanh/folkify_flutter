@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/widgets/gradient_button.dart';
@@ -22,7 +22,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         leading: IconButton(
-          icon: Icon(Iconsax.arrow_left_2, color: AppColors.textPrimary),
+          icon: FaIcon(FontAwesomeIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text('Nâng cấp tài khoản', style: AppTextStyles.headlineMedium),
@@ -45,7 +45,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                   const SnackBar(content: Text('Tính năng thanh toán sẽ có sớm!'), backgroundColor: AppColors.primary),
                 );
               },
-              icon: Iconsax.crown5,
+              icon: FontAwesomeIcons.crown,
             ),
             const SizedBox(height: 12),
             TextButton(
@@ -62,7 +62,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        const Text('👑', style: TextStyle(fontSize: 56)),
+        FaIcon(FontAwesomeIcons.crown, color: const Color(0xFFF59E0B), size: 56),
         const SizedBox(height: 16),
         Text('Mở khóa toàn bộ\nnội dung Folkify', style: AppTextStyles.displayMedium, textAlign: TextAlign.center),
         const SizedBox(height: 8),
@@ -102,10 +102,10 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
 
   Widget _buildFeatureList() {
     final features = [
-      (Iconsax.book_15, 'Học không giới hạn', '100+ bài học từ cơ bản đến nâng cao'),
-      (Iconsax.music_playlist, 'Kho bản nhạc phong phú', '200+ bản nhạc dân tộc Việt Nam'),
-      (Iconsax.import5, 'Học offline', 'Tải nội dung để học mà không cần mạng'),
-      (Iconsax.trend_up, 'Theo dõi tiến trình', 'Thống kê chi tiết hành trình học tập'),
+      (FontAwesomeIcons.book, 'Học không giới hạn', '100+ bài học từ cơ bản đến nâng cao'),
+      (FontAwesomeIcons.listUl, 'Kho bản nhạc phong phú', '200+ bản nhạc dân tộc Việt Nam'),
+      (FontAwesomeIcons.download, 'Học offline', 'Tải nội dung để học mà không cần mạng'),
+      (FontAwesomeIcons.arrowTrendUp, 'Theo dõi tiến trình', 'Thống kê chi tiết hành trình học tập'),
     ];
 
     return Column(
@@ -120,7 +120,8 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                 color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(f.$1, color: AppColors.primary, size: 20),
+              alignment: Alignment.center,
+              child: FaIcon(f.$1, color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -213,7 +214,7 @@ class _PlanCard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
                 children: [
-                  Icon(Iconsax.tick_circle5, color: color, size: 16),
+                  FaIcon(FontAwesomeIcons.circleCheck, color: color, size: 16),
                   const SizedBox(width: 8),
                   Text(f, style: AppTextStyles.bodyMedium),
                 ],
@@ -223,7 +224,7 @@ class _PlanCard extends StatelessWidget {
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,
-                child: Icon(Iconsax.record_circle5, color: color, size: 20),
+                child: FaIcon(FontAwesomeIcons.recordVinyl, color: color, size: 20),
               ),
             ],
           ],

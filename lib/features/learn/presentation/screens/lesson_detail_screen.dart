@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/widgets/gradient_button.dart';
@@ -46,8 +46,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         leading: IconButton(
-          icon: Icon(Iconsax.arrow_left_2, color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
+          icon: FaIcon(FontAwesomeIcons.arrowLeft, color: AppColors.textPrimary),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/learn/${widget.instrumentId}'),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,7 +147,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Iconsax.play5, color: Colors.white, size: 32),
+                alignment: Alignment.center,
+                child: FaIcon(FontAwesomeIcons.play, color: Colors.white, size: 32),
               ),
               const SizedBox(height: 8),
               Text('Xem video hướng dẫn', style: AppTextStyles.bodyMedium),
@@ -167,7 +168,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Iconsax.video, color: AppColors.textMuted, size: 40),
+            FaIcon(FontAwesomeIcons.video, color: AppColors.textMuted, size: 40),
             const SizedBox(height: 8),
             Text('Video sắp ra mắt', style: AppTextStyles.bodyMedium),
           ],
@@ -232,7 +233,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                     ),
                     child: Center(
                       child: isDone
-                          ? Icon(Iconsax.tick_square, color: Colors.white, size: 16)
+                          ? FaIcon(FontAwesomeIcons.squareCheck, color: Colors.white, size: 16)
                           : Text(
                               '${index + 1}',
                               style: AppTextStyles.bodySmall.copyWith(
@@ -275,7 +276,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         children: [
           Row(
             children: [
-              const Text('💡', style: TextStyle(fontSize: 18)),
+              FaIcon(FontAwesomeIcons.lightbulb, color: AppColors.warning, size: 18),
               const SizedBox(width: 8),
               Text('Mẹo luyện tập', style: AppTextStyles.titleMedium.copyWith(color: AppColors.warning)),
             ],
@@ -330,8 +331,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                 }
               },
               icon: _currentStep < lesson.steps.length - 1
-                  ? Iconsax.arrow_right_3
-                  : Iconsax.tick_circle5,
+                  ? FontAwesomeIcons.arrowRight
+                  : FontAwesomeIcons.circleCheck,
             ),
           ),
         ],
@@ -346,7 +347,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🎉', style: TextStyle(fontSize: 80)),
+            FaIcon(FontAwesomeIcons.trophy, color: AppColors.primary, size: 80),
             const SizedBox(height: 24),
             Text('Bài học hoàn thành!', style: AppTextStyles.displayMedium, textAlign: TextAlign.center),
             const SizedBox(height: 12),
@@ -366,7 +367,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Iconsax.star5, color: AppColors.primary, size: 32),
+                  FaIcon(FontAwesomeIcons.star, color: AppColors.primary, size: 32),
                   const SizedBox(width: 12),
                   Column(
                     children: [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 
@@ -8,7 +9,7 @@ class GradientButton extends StatelessWidget {
   final bool isLoading;
   final double? width;
   final double height;
-  final IconData? icon;
+  final FaIconData? icon;
 
   const GradientButton({
     super.key,
@@ -69,7 +70,7 @@ class GradientButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 18, color: Colors.white),
+                      FaIcon(icon!, size: 16, color: Colors.white),
                       const SizedBox(width: 8),
                     ],
                     Text(

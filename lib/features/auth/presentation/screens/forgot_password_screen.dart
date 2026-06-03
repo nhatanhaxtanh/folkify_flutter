@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/widgets/gradient_button.dart';
@@ -50,7 +50,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: Icon(Iconsax.arrow_left_2, color: AppColors.textPrimary),
+                      icon: FaIcon(FontAwesomeIcons.arrowLeft, color: AppColors.textPrimary),
                       onPressed: () => context.pop(),
                     ),
                   ],
@@ -81,7 +81,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppColors.primary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Icon(Iconsax.lock5, color: AppColors.primary, size: 30),
+          alignment: Alignment.center,
+          child: FaIcon(FontAwesomeIcons.lock, color: AppColors.primary, size: 30),
         ),
         const SizedBox(height: 24),
         Text('Quên mật khẩu?', style: AppTextStyles.displayMedium),
@@ -99,7 +100,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Email',
-              prefixIcon: Icon(Iconsax.sms, color: AppColors.textMuted),
+              prefixIcon: FaIcon(FontAwesomeIcons.envelope, color: AppColors.textMuted),
             ),
             validator: (v) {
               if (v == null || v.isEmpty) return 'Vui lòng nhập email';
@@ -113,7 +114,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           text: 'Gửi hướng dẫn',
           onPressed: _submit,
           isLoading: _isLoading,
-          icon: Iconsax.send5,
+          icon: FontAwesomeIcons.paperPlane,
         ),
       ],
     );
@@ -131,7 +132,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppColors.success.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: Icon(Iconsax.tick_circle5, color: AppColors.success, size: 44),
+          alignment: Alignment.center,
+          child: FaIcon(FontAwesomeIcons.circleCheck, color: AppColors.success, size: 44),
         ),
         const SizedBox(height: 24),
         Text('Email đã được gửi!', style: AppTextStyles.headlineLarge, textAlign: TextAlign.center),

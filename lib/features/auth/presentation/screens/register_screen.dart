@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
@@ -107,7 +107,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Iconsax.arrow_left_2, color: AppColors.textPrimary),
+            icon: FaIcon(FontAwesomeIcons.arrowLeft, color: AppColors.textPrimary),
             onPressed: () => context.pop(),
           ),
         ],
@@ -126,7 +126,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             style: AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Họ và tên',
-              prefixIcon: Icon(Iconsax.user, color: AppColors.textMuted),
+              prefixIcon: Center(widthFactor: 1.0, child: FaIcon(FontAwesomeIcons.user, color: AppColors.textMuted)),
             ),
             validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tên' : null,
           ),
@@ -137,7 +137,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             style: AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Email',
-              prefixIcon: Icon(Iconsax.sms, color: AppColors.textMuted),
+              prefixIcon: Center(widthFactor: 1.0, child: FaIcon(FontAwesomeIcons.envelope, color: AppColors.textMuted)),
             ),
             validator: (v) {
               if (v == null || v.isEmpty) return 'Vui lòng nhập email';
@@ -152,10 +152,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             style: AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Mật khẩu',
-              prefixIcon: Icon(Iconsax.lock, color: AppColors.textMuted),
+              prefixIcon: Center(widthFactor: 1.0, child: FaIcon(FontAwesomeIcons.lock, color: AppColors.textMuted)),
               suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePass ? Iconsax.eye_slash : Iconsax.eye,
+                icon: FaIcon(
+                  _obscurePass ? FontAwesomeIcons.eyeSlash : FontAwesomeIcons.eye,
                   color: AppColors.textMuted,
                 ),
                 onPressed: () => setState(() => _obscurePass = !_obscurePass),
@@ -174,10 +174,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             style: AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Xác nhận mật khẩu',
-              prefixIcon: Icon(Iconsax.lock, color: AppColors.textMuted),
+              prefixIcon: Center(widthFactor: 1.0, child: FaIcon(FontAwesomeIcons.lock, color: AppColors.textMuted)),
               suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureConfirm ? Iconsax.eye_slash : Iconsax.eye,
+                icon: FaIcon(
+                  _obscureConfirm ? FontAwesomeIcons.eyeSlash : FontAwesomeIcons.eye,
                   color: AppColors.textMuted,
                 ),
                 onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),

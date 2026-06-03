@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../data/instruments_data.dart';
@@ -81,9 +81,10 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
             color: Colors.black.withValues(alpha: 0.4),
             shape: BoxShape.circle,
           ),
-          child: Icon(Iconsax.arrow_left_2, color: Colors.white, size: 16),
+          alignment: Alignment.center,
+          child: FaIcon(FontAwesomeIcons.arrowLeft, color: Colors.white, size: 16),
         ),
-        onPressed: () => context.pop(),
+        onPressed: () => context.canPop() ? context.pop() : context.go('/learn'),
       ),
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
@@ -197,7 +198,7 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
                   ),
                   child: Center(
                     child: isFirst
-                        ? Icon(Iconsax.play5, color: Colors.white, size: 22)
+                        ? FaIcon(FontAwesomeIcons.play, color: Colors.white, size: 22)
                         : Text(
                             '${index + 1}',
                             style: AppTextStyles.titleLarge.copyWith(color: AppColors.textMuted),
@@ -213,7 +214,7 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Iconsax.clock, size: 12, color: AppColors.textMuted),
+                          FaIcon(FontAwesomeIcons.clock, size: 12, color: AppColors.textMuted),
                           const SizedBox(width: 4),
                           Text(lesson.duration, style: AppTextStyles.bodySmall),
                           const SizedBox(width: 12),
@@ -257,7 +258,10 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('✨ ', style: TextStyle(fontSize: 14)),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8, top: 2),
+                      child: FaIcon(FontAwesomeIcons.check, color: AppColors.primary, size: 13),
+                    ),
                     Expanded(child: Text(f, style: AppTextStyles.bodyMedium.copyWith(height: 1.5))),
                   ],
                 ),
@@ -269,10 +273,10 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
 
   Widget _buildInfoGrid(Instrument inst) {
     final items = [
-      ('Nguồn gốc', inst.origin, Iconsax.global),
-      ('Chất liệu', inst.material, Iconsax.setting),
-      ('Âm vực', inst.soundRange, Iconsax.voice_square),
-      ('Vùng miền', inst.region, Iconsax.location5),
+      ('Nguồn gốc', inst.origin, FontAwesomeIcons.globe),
+      ('Chất liệu', inst.material, FontAwesomeIcons.gear),
+      ('Âm vực', inst.soundRange, FontAwesomeIcons.microphone),
+      ('Vùng miền', inst.region, FontAwesomeIcons.locationPin),
     ];
     return GridView.count(
       crossAxisCount: 2,
@@ -290,7 +294,7 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
         ),
         child: Row(
           children: [
-            Icon(item.$3, color: AppColors.primary, size: 18),
+            FaIcon(item.$3, color: AppColors.primary, size: 18),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -331,7 +335,8 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Iconsax.music5, color: AppColors.primary, size: 22),
+                alignment: Alignment.center,
+                child: FaIcon(FontAwesomeIcons.music, color: AppColors.primary, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -345,7 +350,7 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
               ),
               Text(song.duration, style: AppTextStyles.bodySmall),
               const SizedBox(width: 10),
-              Icon(Iconsax.play_circle, color: AppColors.primary, size: 28),
+              FaIcon(FontAwesomeIcons.circlePlay, color: AppColors.primary, size: 28),
             ],
           ),
         );
