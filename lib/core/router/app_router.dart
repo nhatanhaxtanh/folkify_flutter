@@ -5,6 +5,8 @@ import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/biometric_lock_screen.dart';
+import '../../features/auth/presentation/screens/register_success_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/learn/presentation/screens/learn_screen.dart';
 import '../../features/learn/presentation/screens/instrument_detail_screen.dart';
@@ -26,6 +28,7 @@ class _AuthChangeNotifier extends ChangeNotifier {
   final Ref _ref;
 
   bool get isLoggedIn => _ref.read(authStateProvider).isLoggedIn;
+  bool get requiresBiometric => _ref.read(authStateProvider).requiresBiometric;
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -36,14 +39,19 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: (context, state) {
       final isLoggedIn = notifier.isLoggedIn;
-      final isSplash = state.matchedLocation == '/splash';
-      final isAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register' ||
-          state.matchedLocation == '/forgot-password';
+      final requiresBiometric = notifier.requiresBiometric;
+      final loc = state.matchedLocation;
+      final isSplash = loc == '/splash';
+      final isAuthRoute = loc == '/login' ||
+          loc == '/register' ||
+          loc == '/forgot-password';
+      final isBiometricLock = loc == '/biometric-lock';
 
       if (isSplash) return null;
-      if (!isLoggedIn && !isAuthRoute) return '/login';
+      if (requiresBiometric && !isBiometricLock) return '/biometric-lock';
+      if (!isLoggedIn && !requiresBiometric && !isAuthRoute) return '/login';
       if (isLoggedIn && isAuthRoute) return '/';
+      if (isLoggedIn && isBiometricLock) return '/';
       return null;
     },
     routes: [
@@ -51,6 +59,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/forgot-password', builder: (_, _) => const ForgotPasswordScreen()),
+      GoRoute(path: '/register-success', builder: (_, _) => const RegisterSuccessScreen()),
+      GoRoute(path: '/biometric-lock', builder: (_, _) => const BiometricLockScreen()),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [

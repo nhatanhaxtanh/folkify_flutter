@@ -23,6 +23,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -35,20 +36,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    setState(() { _isLoading = true; _errorMessage = null; });
     try {
       await ref.read(authStateProvider.notifier).register(
             _nameCtrl.text.trim(),
             _emailCtrl.text.trim(),
             _passCtrl.text,
           );
-      if (mounted) context.go('/');
+      if (mounted) context.go('/register-success');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đăng ký thất bại: $e'), backgroundColor: AppColors.error),
-        );
-      }
+      if (mounted) setState(() => _errorMessage = e.toString());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -81,6 +78,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Text('Bắt đầu hành trình âm nhạc của bạn', style: AppTextStyles.bodyMedium),
                       const SizedBox(height: 32),
                       _buildForm(),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        _buildErrorBanner(_errorMessage!),
+                      ],
                       const SizedBox(height: 32),
                       GradientButton(
                         text: 'Đăng ký',
@@ -97,6 +98,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -141,7 +166,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             validator: (v) {
               if (v == null || v.isEmpty) return 'Vui lòng nhập email';
-              if (!v.contains('@')) return 'Email không hợp lệ';
+              final valid = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+              if (!valid.hasMatch(v.trim())) return 'Email không đúng định dạng (vd: ten@gmail.com)';
               return null;
             },
           ),

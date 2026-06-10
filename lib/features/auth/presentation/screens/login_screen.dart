@@ -14,16 +14,35 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscurePass = true;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  String? _errorMessage;
+
+  late final AnimationController _exitCtrl;
+  late final Animation<Offset> _exitSlide;
+
+  @override
+  void initState() {
+    super.initState();
+    _exitCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _exitSlide = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(-1.0, 0.0),
+    ).animate(CurvedAnimation(parent: _exitCtrl, curve: Curves.easeInCubic));
+  }
 
   @override
   void dispose() {
+    _exitCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
@@ -31,22 +50,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    setState(() { _isLoading = true; _errorMessage = null; });
     try {
       await ref.read(authStateProvider.notifier).login(
             _emailCtrl.text.trim(),
             _passCtrl.text,
           );
-      if (mounted) context.go('/');
-    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đăng nhập thất bại: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        await _exitCtrl.forward();
+        if (mounted) context.go('/');
       }
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = e.toString());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -54,7 +69,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SlideTransition(
+      position: _exitSlide,
+      child: Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -85,6 +102,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _buildBadges(),
                     const SizedBox(height: 28),
                     _buildForm(),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      _buildErrorBanner(_errorMessage!),
+                    ],
                     const SizedBox(height: 12),
                     _buildForgotPassword(),
                     const SizedBox(height: 20),
@@ -102,6 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -168,6 +190,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
             style: const TextStyle(color: Colors.white),
+            onChanged: (_) { if (_errorMessage != null) setState(() => _errorMessage = null); },
             decoration: InputDecoration(
               hintText: 'you@example.com',
               labelText: 'Email',
@@ -184,7 +207,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             validator: (v) {
               if (v == null || v.isEmpty) return 'Vui lòng nhập email';
-              if (!v.contains('@')) return 'Email không hợp lệ';
+              final valid = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+              if (!valid.hasMatch(v.trim())) return 'Email không đúng định dạng (vd: ten@gmail.com)';
               return null;
             },
           ),
@@ -238,6 +262,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+            ),
+          ),
+        ],
       ),
     );
   }

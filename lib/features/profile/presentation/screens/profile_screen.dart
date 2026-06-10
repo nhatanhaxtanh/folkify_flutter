@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/services/biometric_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -16,11 +17,26 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
+  BiometricInfo _biometricInfo = (label: 'Face ID', icon: Icons.face_retouching_natural_rounded);
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final available = await BiometricService.isAvailable();
+    final enabled = await ref.read(authStateProvider.notifier).isBiometricEnabled();
+    final info = await BiometricService.getBiometricInfo();
+    if (mounted) setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = enabled;
+      _biometricInfo = info;
+    });
   }
 
   @override
@@ -506,6 +522,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildSettingsTab(BuildContext context) {
     final menuItems = [
+      if (_biometricAvailable)
+        _MenuItem(
+          icon: FontAwesomeIcons.faceFlushed,
+          materialIcon: _biometricInfo.icon,
+          label: 'Đăng nhập bằng ${_biometricInfo.label}',
+          color: AppColors.textSecondary,
+          onTap: () {},
+          trailing: Switch(
+            value: _biometricEnabled,
+            activeThumbColor: AppColors.primary,
+            activeTrackColor: AppColors.primaryLight,
+            onChanged: (val) async {
+              if (val) {
+                final ok = await BiometricService.authenticate();
+                if (!ok) return;
+                await ref.read(authStateProvider.notifier).enableBiometric();
+              } else {
+                await ref.read(authStateProvider.notifier).disableBiometric();
+              }
+              if (mounted) setState(() => _biometricEnabled = val);
+            },
+          ),
+        ),
       _MenuItem(icon: FontAwesomeIcons.bell, label: 'Thông báo', color: AppColors.textSecondary, onTap: () {}),
       _MenuItem(icon: FontAwesomeIcons.language, label: 'Ngôn ngữ', color: AppColors.textSecondary, onTap: () {}),
       _MenuItem(icon: FontAwesomeIcons.circleQuestion, label: 'Trợ giúp & Hỗ trợ', color: AppColors.textSecondary, onTap: () {}),
@@ -546,14 +585,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         borderRadius: BorderRadius.circular(10),
                       ),
                       alignment: Alignment.center,
-                      child: FaIcon(item.icon, color: item.color, size: 16),
+                      child: item.materialIcon != null
+                          ? Icon(item.materialIcon, color: item.color, size: 20)
+                          : FaIcon(item.icon, color: item.color, size: 16),
                     ),
                     title: Text(item.label, style: AppTextStyles.titleMedium.copyWith(
                       color: item.color == AppColors.error ? AppColors.error : AppColors.textPrimary,
                     )),
-                    trailing: item.color != AppColors.error
+                    trailing: item.trailing ?? (item.color != AppColors.error
                         ? FaIcon(FontAwesomeIcons.chevronRight, color: AppColors.textMuted, size: 14)
-                        : null,
+                        : null),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                     minLeadingWidth: 0,
                   ),
@@ -600,8 +641,10 @@ class _StatChip extends StatelessWidget {
 
 class _MenuItem {
   final FaIconData icon;
+  final IconData? materialIcon;
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _MenuItem({required this.icon, required this.label, required this.color, required this.onTap});
+  final Widget? trailing;
+  const _MenuItem({required this.icon, this.materialIcon, required this.label, required this.color, required this.onTap, this.trailing});
 }
