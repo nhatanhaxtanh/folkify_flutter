@@ -179,17 +179,27 @@ class HomeScreen extends ConsumerWidget {
                         style: AppTextStyles.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: pct,
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4ADE80)),
-                          minHeight: 8,
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: pct),
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeOut,
+                        builder: (context, value, _) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: value,
+                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4ADE80)),
+                                minHeight: 8,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text('${(value * 100).toInt()}% hoàn thành', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text('${(pct * 100).toInt()}% hoàn thành', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
                     ],
                   );
                 }),
