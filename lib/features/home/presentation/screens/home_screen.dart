@@ -11,7 +11,7 @@ import '../../../../core/providers/progress_provider.dart';
 import '../../../../core/services/progress_service.dart';
 
 const _kLocalImages = <String, String>{
-  'dan-tranh': 'assets/images/instruments/dan_tranh.jpg',
+  'dan-tranh': 'assets/images/instruments/dan_tranh.png',
 };
 
 const _kFeaturedImages = <String, String>{
