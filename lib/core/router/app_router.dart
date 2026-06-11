@@ -5,6 +5,7 @@ import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../features/auth/presentation/screens/biometric_lock_screen.dart';
 import '../../features/auth/presentation/screens/register_success_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -44,7 +45,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isSplash = loc == '/splash';
       final isAuthRoute = loc == '/login' ||
           loc == '/register' ||
-          loc == '/forgot-password';
+          loc == '/forgot-password' ||
+          loc == '/reset-password';
       final isBiometricLock = loc == '/biometric-lock';
 
       if (isSplash) return null;
@@ -59,6 +61,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/forgot-password', builder: (_, _) => const ForgotPasswordScreen()),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, state) => ResetPasswordScreen(
+          token: state.uri.queryParameters['token'] ?? '',
+        ),
+      ),
       GoRoute(path: '/register-success', builder: (_, _) => const RegisterSuccessScreen()),
       GoRoute(path: '/biometric-lock', builder: (_, _) => const BiometricLockScreen()),
       ShellRoute(

@@ -94,6 +94,17 @@ class AuthService {
     }
   }
 
+  static Future<void> resetPassword(String token, String newPassword) async {
+    try {
+      await _dio.post('/api/auth/reset-password', data: {
+        'token': token,
+        'newPassword': newPassword,
+      });
+    } on DioException catch (e) {
+      throw AuthException(_extractMessage(e));
+    }
+  }
+
   static Future<AuthTokens> refreshAccessToken(String refreshToken) async {
     try {
       final res = await _dio.post('/api/auth/refresh-token', data: {
