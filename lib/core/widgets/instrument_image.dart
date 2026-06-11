@@ -8,7 +8,7 @@ const _kLocalImages = <String, String>{
 };
 
 const _kImageScales = <String, double>{
-  'dan-bau': 1.4,
+  'dan-bau': 1.2,
 };
 
 const _kFeaturedImages = <String, String>{
