@@ -6,6 +6,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/services/biometric_service.dart';
+import '../../../../core/services/token_storage.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +24,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool _obscurePass = true;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isBiometricLoading = false;
+  bool _biometricReady = false;
+  BiometricInfo _biometricInfo = (label: 'Face ID', icon: Icons.face_retouching_natural_rounded);
   String? _errorMessage;
 
   late final AnimationController _exitCtrl;
@@ -38,6 +43,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       begin: Offset.zero,
       end: const Offset(-1.0, 0.0),
     ).animate(CurvedAnimation(parent: _exitCtrl, curve: Curves.easeInCubic));
+    _checkBiometricOption();
+  }
+
+  Future<void> _checkBiometricOption() async {
+    final enabled = await ref.read(authStateProvider.notifier).isBiometricEnabled();
+    if (!enabled) return;
+    final available = await BiometricService.isAvailable();
+    if (!available) return;
+    final token = await TokenStorage.getRefreshToken();
+    if (token == null) return;
+    final info = await BiometricService.getBiometricInfo();
+    if (mounted) setState(() { _biometricReady = true; _biometricInfo = info; });
+  }
+
+  Future<void> _loginWithBiometric() async {
+    setState(() => _isBiometricLoading = true);
+    try {
+      final success = await ref.read(authStateProvider.notifier).biometricRelogin();
+      if (!success && mounted) {
+        setState(() => _errorMessage = 'Xác thực thất bại, vui lòng đăng nhập bằng mật khẩu');
+      }
+    } finally {
+      if (mounted) setState(() => _isBiometricLoading = false);
+    }
   }
 
   @override
@@ -114,6 +143,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     _buildDivider(),
                     const SizedBox(height: 16),
                     _buildGoogleButton(),
+                    if (_biometricReady) ...[
+                      const SizedBox(height: 12),
+                      _buildFaceIdButton(),
+                    ],
                     const SizedBox(height: 20),
                     _buildRegisterLink(),
                   ],
@@ -386,6 +419,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       color: const Color(0xFF3C4043),
                       fontSize: 15,
                     ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildFaceIdButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: OutlinedButton(
+        onPressed: _isBiometricLoading ? null : _loginWithBiometric,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: _isBiometricLoading
+            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(_biometricInfo.icon, size: 22, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Đăng nhập bằng ${_biometricInfo.label}',
+                    style: AppTextStyles.labelLarge.copyWith(color: Colors.white, fontSize: 15),
                   ),
                 ],
               ),

@@ -28,4 +28,7 @@ class TokenStorage {
         _storage.delete(key: _accessTokenKey),
         _storage.delete(key: _refreshTokenKey),
       ]).then((_) {});
+
+  static Future<void> clearAccessToken() =>
+      _storage.delete(key: _accessTokenKey);
 }

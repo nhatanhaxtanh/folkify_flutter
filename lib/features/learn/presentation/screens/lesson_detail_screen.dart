@@ -41,13 +41,18 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       return Scaffold(appBar: AppBar(), body: const Center(child: Text('Không tìm thấy bài học')));
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go('/learn/${widget.instrumentId}');
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         leading: IconButton(
           icon: FaIcon(FontAwesomeIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () => context.canPop() ? context.pop() : context.go('/learn/${widget.instrumentId}'),
+          onPressed: () => context.go('/learn/${widget.instrumentId}'),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,6 +74,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         ],
       ),
       body: _completed ? _buildCompletionView(context, lesson) : _buildLessonView(context, lesson),
+    ),
     );
   }
 

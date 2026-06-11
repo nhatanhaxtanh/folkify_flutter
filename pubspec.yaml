@@ -1,7 +1,7 @@
 name: folkify_flutter
 description: "Folkify - App học nhạc cụ dân tộc Việt Nam"
 publish_to: "none"
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.12.0

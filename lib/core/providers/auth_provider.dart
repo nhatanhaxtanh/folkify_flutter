@@ -145,7 +145,10 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<bool> loginWithGoogle() async {
-    final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+    final googleSignIn = GoogleSignIn(
+      scopes: ['email', 'profile'],
+      serverClientId: '293181909519-ca83elb1tee2g9ndilv669jt9k7vr1vp.apps.googleusercontent.com',
+    );
     final account = await googleSignIn.signIn();
     if (account == null) return false;
 
@@ -166,19 +169,48 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
-    final refreshToken = await TokenStorage.getRefreshToken();
-    if (refreshToken != null) {
-      await AuthService.logout(refreshToken);
-    }
     final prefs = await SharedPreferences.getInstance();
+    final biometricEnabled = prefs.getBool(_keyBiometricEnabled) ?? false;
+
+    if (biometricEnabled) {
+      // Giữ refresh token để dùng biometric re-login
+      await TokenStorage.clearAccessToken();
+    } else {
+      final refreshToken = await TokenStorage.getRefreshToken();
+      if (refreshToken != null) {
+        await AuthService.logout(refreshToken);
+      }
+      await TokenStorage.clearTokens();
+    }
+
     await Future.wait([
-      TokenStorage.clearTokens(),
       prefs.remove(_keyUserName),
       prefs.remove(_keyUserEmail),
       prefs.remove(_keyUserId),
       prefs.remove(_keyUserRole),
     ]);
     state = const AuthState(isLoggedIn: false);
+  }
+
+  Future<bool> biometricRelogin() async {
+    final refreshToken = await TokenStorage.getRefreshToken();
+    if (refreshToken == null) return false;
+    final success = await BiometricService.authenticate();
+    if (!success) return false;
+    try {
+      final tokens = await AuthService.refreshAccessToken(refreshToken);
+      await _persistUser(tokens);
+      state = AuthState(
+        isLoggedIn: true,
+        userEmail: tokens.user.email,
+        userName: tokens.user.name,
+        userId: tokens.user.id,
+        role: tokens.user.role,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }
 

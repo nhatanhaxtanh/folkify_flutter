@@ -100,7 +100,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Email',
-              prefixIcon: FaIcon(FontAwesomeIcons.envelope, color: AppColors.textMuted),
+              prefixIcon: Center(widthFactor: 1.0, child: FaIcon(FontAwesomeIcons.envelope, color: AppColors.textMuted, size: 20)),
             ),
             validator: (v) {
               if (v == null || v.isEmpty) return 'Vui lòng nhập email';
