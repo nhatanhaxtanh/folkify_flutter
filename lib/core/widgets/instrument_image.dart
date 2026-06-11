@@ -7,6 +7,10 @@ const _kLocalImages = <String, String>{
   'dan-bau': 'assets/images/instruments/dan_bau.png',
 };
 
+const _kImageScales = <String, double>{
+  'dan-bau': 1.4,
+};
+
 const _kFeaturedImages = <String, String>{
   'dan-tranh': 'assets/images/instruments/dan_tranh_featured.jpg',
 };
@@ -61,14 +65,20 @@ class InstrumentImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final map = featured ? _kFeaturedImages : _kLocalImages;
     final local = map[slug] ?? _kLocalImages[slug];
-    if (local != null) {
-      return Image.asset(local, fit: fit);
+    final scale = _kImageScales[slug] ?? 1.0;
+
+    Widget img = local != null
+        ? Image.asset(local, fit: fit)
+        : Image.network(
+            imageUrl,
+            fit: fit,
+            errorBuilder: (ctx, err, stack) =>
+                Center(child: Text(emoji, style: const TextStyle(fontSize: 48))),
+          );
+
+    if (scale != 1.0) {
+      img = Transform.scale(scale: scale, child: img);
     }
-    return Image.network(
-      imageUrl,
-      fit: fit,
-      errorBuilder: (ctx, err, stack) =>
-          Center(child: Text(emoji, style: const TextStyle(fontSize: 48))),
-    );
+    return img;
   }
 }
