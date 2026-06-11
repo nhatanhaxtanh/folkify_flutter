@@ -4,6 +4,7 @@ import '../../features/learn/domain/models/instrument.dart';
 const _kLocalImages = <String, String>{
   'dan-tranh': 'assets/images/instruments/dan_tranh.png',
   'sao-truc': 'assets/images/instruments/sao_truc.png',
+  'dan-bau': 'assets/images/instruments/dan_bau.png',
 };
 
 const _kFeaturedImages = <String, String>{
