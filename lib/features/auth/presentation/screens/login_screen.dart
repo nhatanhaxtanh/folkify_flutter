@@ -445,7 +445,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ),
         child: _isBiometricLoading
             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : Icon(_biometricInfo.icon, size: 24, color: Colors.white),
+            : _biometricInfo.label == 'Face ID'
+                ? SvgPicture.asset(
+                    'assets/icons/face_id.svg',
+                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    width: 26,
+                    height: 26,
+                  )
+                : Icon(_biometricInfo.icon, size: 24, color: Colors.white),
       ),
     );
   }
