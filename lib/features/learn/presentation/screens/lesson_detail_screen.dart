@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -539,7 +538,6 @@ class _CompletionViewState extends State<_CompletionView>
   late final AnimationController _entrance;
   late final AnimationController _confetti;
   late final AnimationController _pulse;
-  final _player = AudioPlayer();
 
   late final Animation<double> _trophyScale;
   late final Animation<double> _contentFade;
@@ -553,7 +551,7 @@ class _CompletionViewState extends State<_CompletionView>
   @override
   void initState() {
     super.initState();
-    _player.play(AssetSource('sounds/applause.wav'));
+
 
     _entrance = AnimationController(
       vsync: this,
@@ -625,7 +623,6 @@ class _CompletionViewState extends State<_CompletionView>
     _entrance.dispose();
     _confetti.dispose();
     _pulse.dispose();
-    _player.dispose();
     super.dispose();
   }
 

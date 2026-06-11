@@ -1,4 +1,3 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,18 +7,7 @@ import 'core/services/app_toast.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AudioPlayer.global.setAudioContext(
-    AudioContext(
-      iOS: AudioContextIOS(
-        category: AVAudioSessionCategory.playback,
-        options: {AVAudioSessionOptions.defaultToSpeaker},
-      ),
-      android: AudioContextAndroid(
-        audioFocus: AndroidAudioFocus.gain,
-        usageType: AndroidUsageType.media,
-      ),
-    ),
-  );
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
