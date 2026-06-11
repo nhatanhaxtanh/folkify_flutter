@@ -48,6 +48,10 @@ flutter:
     - assets/images/
     - assets/images/instruments/
     - assets/icons/
+  fonts:
+    - family: Baloo2
+      fonts:
+        - asset: assets/fonts/Baloo2.ttf
 
 flutter_launcher_icons:
   android: true
