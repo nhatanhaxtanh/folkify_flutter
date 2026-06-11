@@ -5,6 +5,7 @@ import 'token_storage.dart';
 
 class ApiClient {
   static Dio? _instance;
+  static void Function()? onSessionExpired;
 
   static Dio get instance {
     _instance ??= _build();
@@ -60,6 +61,7 @@ class _AuthInterceptor extends Interceptor {
         }
       } catch (_) {
         await TokenStorage.clearTokens();
+        ApiClient.onSessionExpired?.call();
       } finally {
         _isRefreshing = false;
       }
