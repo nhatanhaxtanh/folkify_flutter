@@ -192,6 +192,24 @@ class AuthNotifier extends Notifier<AuthState> {
     state = const AuthState(isLoggedIn: false);
   }
 
+  Future<void> updateUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserName, name);
+    state = state.copyWith(userName: name);
+  }
+
+  Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await TokenStorage.clearTokens();
+    await Future.wait([
+      prefs.remove(_keyUserName),
+      prefs.remove(_keyUserEmail),
+      prefs.remove(_keyUserId),
+      prefs.remove(_keyUserRole),
+    ]);
+    state = const AuthState(isLoggedIn: false);
+  }
+
   Future<bool> biometricRelogin() async {
     final refreshToken = await TokenStorage.getRefreshToken();
     if (refreshToken == null) return false;

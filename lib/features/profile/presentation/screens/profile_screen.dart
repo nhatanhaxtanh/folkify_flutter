@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/services/biometric_service.dart';
+import '../../../../core/services/user_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -43,6 +44,84 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _editName(BuildContext ctx) async {
+    final ctrl = TextEditingController(
+      text: ref.read(authStateProvider).userName ?? '',
+    );
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        title: Text('Sửa tên', style: AppTextStyles.headlineMedium),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Nhập tên mới',
+            hintStyle: TextStyle(color: AppColors.textMuted),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: Text('Lưu', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || ctrl.text.trim().isEmpty) return;
+    try {
+      await UserService.updateProfile(ctrl.text.trim());
+      await ref.read(authStateProvider.notifier).updateUserName(ctrl.text.trim());
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAccount(BuildContext ctx) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        title: Text('Xóa tài khoản', style: AppTextStyles.headlineMedium),
+        content: Text(
+          'Hành động này không thể hoàn tác. Tất cả dữ liệu của bạn sẽ bị xóa vĩnh viễn.',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: Text('Xóa', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await UserService.deleteAccount();
+      await ref.read(authStateProvider.notifier).clearSession();
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Future<void> _handleLogout(BuildContext ctx) async {
@@ -116,36 +195,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             ],
           ),
           const SizedBox(height: 20),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2D7A52),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
-                ),
-                alignment: Alignment.center,
-                child: FaIcon(FontAwesomeIcons.solidStar, color: Colors.white, size: 30),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 26,
-                  height: 26,
+          GestureDetector(
+            onTap: () => _editName(context),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFF2D7A52),
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF2D7A52), width: 1.5),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
                   ),
                   alignment: Alignment.center,
-                  child: FaIcon(FontAwesomeIcons.pencil, color: AppColors.primary, size: 11),
+                  child: FaIcon(FontAwesomeIcons.solidStar, color: Colors.white, size: 30),
                 ),
-              ),
-            ],
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF2D7A52), width: 1.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: FaIcon(FontAwesomeIcons.pencil, color: AppColors.primary, size: 11),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -545,10 +627,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             },
           ),
         ),
+      _MenuItem(icon: FontAwesomeIcons.key, label: 'Đổi mật khẩu', color: AppColors.textSecondary, onTap: () => context.push('/change-password')),
       _MenuItem(icon: FontAwesomeIcons.bell, label: 'Thông báo', color: AppColors.textSecondary, onTap: () {}),
       _MenuItem(icon: FontAwesomeIcons.language, label: 'Ngôn ngữ', color: AppColors.textSecondary, onTap: () {}),
       _MenuItem(icon: FontAwesomeIcons.circleQuestion, label: 'Trợ giúp & Hỗ trợ', color: AppColors.textSecondary, onTap: () {}),
       _MenuItem(icon: FontAwesomeIcons.circleInfo, label: 'Về Folkify', color: AppColors.textSecondary, onTap: () {}),
+      _MenuItem(
+        icon: FontAwesomeIcons.userXmark,
+        label: 'Xóa tài khoản',
+        color: AppColors.error,
+        onTap: () => _deleteAccount(context),
+      ),
       _MenuItem(
         icon: FontAwesomeIcons.rightFromBracket,
         label: 'Đăng xuất',

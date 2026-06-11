@@ -16,6 +16,7 @@ import '../../features/practice/presentation/screens/practice_screen.dart';
 import '../../features/sheets/presentation/screens/sheet_music_screen.dart';
 import '../../features/premium/presentation/screens/premium_plans_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/change_password_screen.dart';
 import '../widgets/main_shell.dart';
 import '../providers/auth_provider.dart';
 
@@ -91,6 +92,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/sheets', pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey, child: const SheetMusicScreen())),
           GoRoute(path: '/premium', pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey, child: const PremiumPlansScreen())),
           GoRoute(path: '/profile', pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey, child: const ProfileScreen())),
+          GoRoute(path: '/change-password', builder: (_, _) => const ChangePasswordScreen()),
         ],
       ),
     ],
