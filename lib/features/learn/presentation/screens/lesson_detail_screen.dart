@@ -540,7 +540,7 @@ class _CompletionViewState extends State<_CompletionView>
   late final AnimationController _confetti;
   late final AnimationController _pulse;
   final _player = AudioPlayer();
-  final _xpPlayer = AudioPlayer();
+  final _tickPlayer = AudioPlayer();
 
   late final Animation<double> _trophyScale;
   late final Animation<double> _contentFade;
@@ -555,9 +555,6 @@ class _CompletionViewState extends State<_CompletionView>
   void initState() {
     super.initState();
     _player.play(AssetSource('sounds/lesson_complete.wav'));
-    Future.delayed(const Duration(milliseconds: 730), () {
-      if (mounted) _xpPlayer.play(AssetSource('sounds/xp_earn.wav'));
-    });
 
     _entrance = AnimationController(
       vsync: this,
@@ -621,6 +618,17 @@ class _CompletionViewState extends State<_CompletionView>
     _trophyPulse = Tween<double>(begin: 1.0, end: 1.07).animate(
       CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
     );
+
+    if (widget.lesson.xp > 0) {
+      Future.delayed(const Duration(milliseconds: 728), () {
+        if (!mounted) return;
+        _tickPlayer.setReleaseMode(ReleaseMode.loop);
+        _tickPlayer.play(AssetSource('sounds/xp_tick.wav'));
+      });
+      _xpCount.addStatusListener((status) {
+        if (status == AnimationStatus.completed) _tickPlayer.stop();
+      });
+    }
   }
 
   @override
@@ -629,7 +637,7 @@ class _CompletionViewState extends State<_CompletionView>
     _confetti.dispose();
     _pulse.dispose();
     _player.dispose();
-    _xpPlayer.dispose();
+    _tickPlayer.dispose();
     super.dispose();
   }
 
