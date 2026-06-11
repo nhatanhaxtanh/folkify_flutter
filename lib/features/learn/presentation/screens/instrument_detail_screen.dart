@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/instrument_provider.dart';
+import '../../../../core/widgets/instrument_image.dart';
 import '../../domain/models/instrument.dart';
 
 class InstrumentDetailScreen extends ConsumerStatefulWidget {
@@ -111,14 +111,7 @@ class _InstrumentDetailScreenState
         background: Stack(
           fit: StackFit.expand,
           children: [
-            CachedNetworkImage(
-              imageUrl: inst.imageUrl,
-              fit: BoxFit.cover,
-              errorWidget: (_, a, b) => Container(
-                color: AppColors.surfaceElevated,
-                child: Center(child: Text(inst.emoji, style: const TextStyle(fontSize: 80))),
-              ),
-            ),
+            InstrumentImage.fromDetail(inst, fit: BoxFit.cover),
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(

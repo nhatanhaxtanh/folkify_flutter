@@ -6,33 +6,10 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/instrument_provider.dart';
-import '../../../learn/domain/models/instrument.dart';
+import '../../../../core/widgets/instrument_image.dart';
 import '../../../../core/providers/progress_provider.dart';
 import '../../../../core/services/progress_service.dart';
 
-const _kLocalImages = <String, String>{
-  'dan-tranh': 'assets/images/instruments/dan_tranh.png',
-  'sao-truc': 'assets/images/instruments/sao_truc.png',
-};
-
-const _kFeaturedImages = <String, String>{
-  'dan-tranh': 'assets/images/instruments/dan_tranh_featured.jpg',
-};
-
-Widget _instrumentImage(InstrumentSummary inst,
-    {BoxFit fit = BoxFit.cover, bool featured = false}) {
-  final map = featured ? _kFeaturedImages : _kLocalImages;
-  final local = map[inst.id] ?? _kLocalImages[inst.id];
-  if (local != null) {
-    return Image.asset(local, fit: fit);
-  }
-  return Image.network(
-    inst.imageUrl,
-    fit: fit,
-    errorBuilder: (ctx, err, stack) =>
-        Center(child: Text(inst.emoji, style: const TextStyle(fontSize: 60))),
-  );
-}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -560,7 +537,7 @@ class HomeScreen extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _instrumentImage(inst, fit: BoxFit.cover, featured: true),
+              InstrumentImage.fromSummary(inst, fit: BoxFit.cover, featured: true),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -636,7 +613,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                      child: _instrumentImage(inst, fit: BoxFit.contain),
+                      child: InstrumentImage.fromSummary(inst, fit: BoxFit.contain),
                     ),
                   ),
                 ),

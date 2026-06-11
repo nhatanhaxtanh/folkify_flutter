@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/instrument_provider.dart';
+import '../../../../core/widgets/instrument_image.dart';
 import '../../domain/models/instrument.dart';
 
 class LearnScreen extends ConsumerWidget {
@@ -209,17 +210,7 @@ class _InstrumentCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              instrument.imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stack) => Container(
-                color: AppColors.primaryDark,
-                child: Center(
-                  child: Text(instrument.emoji,
-                      style: const TextStyle(fontSize: 48)),
-                ),
-              ),
-            ),
+            InstrumentImage.fromSummary(instrument, fit: BoxFit.cover),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
