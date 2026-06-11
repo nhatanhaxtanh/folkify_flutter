@@ -540,6 +540,7 @@ class _CompletionViewState extends State<_CompletionView>
   late final AnimationController _confetti;
   late final AnimationController _pulse;
   final _player = AudioPlayer();
+  final _xpPlayer = AudioPlayer();
 
   late final Animation<double> _trophyScale;
   late final Animation<double> _contentFade;
@@ -554,6 +555,9 @@ class _CompletionViewState extends State<_CompletionView>
   void initState() {
     super.initState();
     _player.play(AssetSource('sounds/lesson_complete.wav'));
+    Future.delayed(const Duration(milliseconds: 730), () {
+      if (mounted) _xpPlayer.play(AssetSource('sounds/xp_earn.wav'));
+    });
 
     _entrance = AnimationController(
       vsync: this,
@@ -625,6 +629,7 @@ class _CompletionViewState extends State<_CompletionView>
     _confetti.dispose();
     _pulse.dispose();
     _player.dispose();
+    _xpPlayer.dispose();
     super.dispose();
   }
 
