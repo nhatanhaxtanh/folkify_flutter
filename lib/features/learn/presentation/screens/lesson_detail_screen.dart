@@ -559,8 +559,8 @@ class _CompletionViewState extends State<_CompletionView>
 
     _confetti = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4000),
-      upperBound: 2.0,
+      duration: const Duration(milliseconds: 5000),
+      upperBound: 2.5,
     )..forward();
 
     _pulse = AnimationController(
