@@ -14,9 +14,14 @@ const _kLocalImages = <String, String>{
   'dan-tranh': 'assets/images/instruments/dan_tranh.jpg',
 };
 
+const _kFeaturedImages = <String, String>{
+  'dan-tranh': 'assets/images/instruments/dan_tranh_featured.jpg',
+};
+
 Widget _instrumentImage(InstrumentSummary inst,
-    {BoxFit fit = BoxFit.cover}) {
-  final local = _kLocalImages[inst.id];
+    {BoxFit fit = BoxFit.cover, bool featured = false}) {
+  final map = featured ? _kFeaturedImages : _kLocalImages;
+  final local = map[inst.id] ?? _kLocalImages[inst.id];
   if (local != null) {
     return Image.asset(local, fit: fit);
   }
@@ -554,7 +559,7 @@ class HomeScreen extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _instrumentImage(inst, fit: BoxFit.cover),
+              _instrumentImage(inst, fit: BoxFit.cover, featured: true),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
