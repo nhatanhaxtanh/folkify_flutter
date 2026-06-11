@@ -499,13 +499,10 @@ class _ConfettiPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     for (final p in _kParticles) {
       final rawY = p.startY + p.speed * progress;
-      if (rawY > 1.1) continue;
+      if (rawY > 1.05 || rawY < -0.05) continue;
       final x = p.x * size.width;
       final y = rawY * size.height;
-      final opacity =
-          rawY > 0.65 ? (1.0 - (rawY - 0.65) / 0.45).clamp(0.0, 1.0) : 1.0;
-      final paint = Paint()
-        ..color = p.color.withValues(alpha: opacity * 0.9);
+      final paint = Paint()..color = p.color.withValues(alpha: 0.9);
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(p.rotSpeed * progress);
@@ -562,7 +559,8 @@ class _CompletionViewState extends State<_CompletionView>
 
     _confetti = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 4000),
+      upperBound: 2.0,
     )..forward();
 
     _pulse = AnimationController(
