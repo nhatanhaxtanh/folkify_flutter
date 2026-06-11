@@ -138,15 +138,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     const SizedBox(height: 12),
                     _buildForgotPassword(),
                     const SizedBox(height: 20),
-                    _buildLoginButton(),
+                    if (_biometricReady)
+                      Row(
+                        children: [
+                          Expanded(child: _buildLoginButton()),
+                          const SizedBox(width: 12),
+                          _buildFaceIdIconButton(),
+                        ],
+                      )
+                    else
+                      _buildLoginButton(),
                     const SizedBox(height: 16),
                     _buildDivider(),
                     const SizedBox(height: 16),
                     _buildGoogleButton(),
-                    if (_biometricReady) ...[
-                      const SizedBox(height: 12),
-                      _buildFaceIdButton(),
-                    ],
                     const SizedBox(height: 20),
                     _buildRegisterLink(),
                   ],
@@ -326,7 +331,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Widget _buildLoginButton() {
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: 52,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _submit,
         style: ElevatedButton.styleFrom(
@@ -426,33 +431,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildFaceIdButton() {
+  Widget _buildFaceIdIconButton() {
     return SizedBox(
-      width: double.infinity,
-      height: 50,
+      width: 52,
+      height: 52,
       child: OutlinedButton(
         onPressed: _isBiometricLoading ? null : _loginWithBiometric,
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: EdgeInsets.zero,
         ),
         child: _isBiometricLoading
-            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(_biometricInfo.icon, size: 22, color: Colors.white),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Đăng nhập bằng ${_biometricInfo.label}',
-                    style: AppTextStyles.labelLarge.copyWith(color: Colors.white, fontSize: 15),
-                  ),
-                ],
-              ),
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Icon(_biometricInfo.icon, size: 24, color: Colors.white),
       ),
     );
   }
+
 
   Widget _buildRegisterLink() {
     return Row(
