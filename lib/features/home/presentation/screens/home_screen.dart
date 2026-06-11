@@ -179,27 +179,7 @@ class HomeScreen extends ConsumerWidget {
                         style: AppTextStyles.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 10),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: pct),
-                        duration: const Duration(milliseconds: 900),
-                        curve: Curves.easeOut,
-                        builder: (context, value, _) => Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: value,
-                                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4ADE80)),
-                                minHeight: 8,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text('${(value * 100).toInt()}% hoàn thành', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
-                          ],
-                        ),
-                      ),
+                      _AnimatedProgressBar(value: pct),
                     ],
                   );
                 }),
@@ -826,4 +806,72 @@ class _NotifItem {
     required this.time,
     required this.unread,
   });
+}
+
+class _AnimatedProgressBar extends StatefulWidget {
+  final double value;
+  const _AnimatedProgressBar({required this.value});
+
+  @override
+  State<_AnimatedProgressBar> createState() => _AnimatedProgressBarState();
+}
+
+class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+    _anim = Tween(begin: 0.0, end: widget.value)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedProgressBar old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value) {
+      final from = _anim.value;
+      _anim = Tween(begin: from, end: widget.value)
+          .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+      _ctrl.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (ctx, child) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: _anim.value,
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Color(0xFF4ADE80)),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${(_anim.value * 100).toInt()}% hoàn thành',
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
 }
