@@ -36,6 +36,7 @@ dependencies:
   google_sign_in: ^6.2.2
   local_auth: ^2.3.0
   flutter_svg: ^2.0.17
+  audioplayers: ^6.7.1
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +49,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/sounds/
 
 flutter_launcher_icons:
   android: true
