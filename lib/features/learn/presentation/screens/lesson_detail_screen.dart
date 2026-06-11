@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/providers/instrument_provider.dart';
 import '../../../../core/widgets/gradient_button.dart';
-import '../../data/instruments_data.dart';
 import '../../domain/models/instrument.dart';
 
-class LessonDetailScreen extends StatefulWidget {
+class LessonDetailScreen extends ConsumerStatefulWidget {
   final String instrumentId;
   final String lessonId;
 
@@ -18,70 +19,120 @@ class LessonDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<LessonDetailScreen> createState() => _LessonDetailScreenState();
+  ConsumerState<LessonDetailScreen> createState() => _LessonDetailScreenState();
 }
 
-class _LessonDetailScreenState extends State<LessonDetailScreen> {
+class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   int _currentStep = 0;
   bool _completed = false;
 
-  Instrument? get _instrument =>
-      kInstruments.where((i) => i.id == widget.instrumentId).firstOrNull;
-
-  Lesson? get _lesson => _instrument?.lessons
-      .where((l) => l.id == widget.lessonId)
-      .firstOrNull;
-
   @override
   Widget build(BuildContext context) {
-    final inst = _instrument;
-    final lesson = _lesson;
+    final lessonAsync = ref.watch(lessonDetailProvider((
+      instrumentSlug: widget.instrumentId,
+      lessonSlug: widget.lessonId,
+    )));
+    final instrumentName = ref
+            .watch(instrumentDetailProvider(widget.instrumentId))
+            .valueOrNull
+            ?.name ??
+        '';
 
-    if (inst == null || lesson == null) {
-      return Scaffold(appBar: AppBar(), body: const Center(child: Text('Không tìm thấy bài học')));
-    }
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) context.go('/learn/${widget.instrumentId}');
-      },
-      child: Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return lessonAsync.when(
+      loading: () => Scaffold(
         backgroundColor: AppColors.background,
-        leading: IconButton(
-          icon: FaIcon(FontAwesomeIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () => context.go('/learn/${widget.instrumentId}'),
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          leading: IconButton(
+            icon: FaIcon(FontAwesomeIcons.arrowLeft,
+                color: AppColors.textPrimary),
+            onPressed: () => context.go('/learn/${widget.instrumentId}'),
+          ),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(inst.name, style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
-            Text(lesson.title, style: AppTextStyles.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ],
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          leading: IconButton(
+            icon: FaIcon(FontAwesomeIcons.arrowLeft,
+                color: AppColors.textPrimary),
+            onPressed: () => context.go('/learn/${widget.instrumentId}'),
+          ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Không tải được bài học',
+                  style: AppTextStyles.bodyMedium),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => ref.invalidate(lessonDetailProvider((
+                  instrumentSlug: widget.instrumentId,
+                  lessonSlug: widget.lessonId,
+                ))),
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (lesson) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) context.go('/learn/${widget.instrumentId}');
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            leading: IconButton(
+              icon: FaIcon(FontAwesomeIcons.arrowLeft,
+                  color: AppColors.textPrimary),
+              onPressed: () => context.go('/learn/${widget.instrumentId}'),
+            ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('+${lesson.xp} XP', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                if (instrumentName.isNotEmpty)
+                  Text(instrumentName,
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.primary)),
+                Text(lesson.title,
+                    style: AppTextStyles.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ],
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('+${lesson.xp} XP',
+                        style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+          body: _completed
+              ? _buildCompletionView(context, lesson)
+              : _buildLessonView(context, lesson),
+        ),
       ),
-      body: _completed ? _buildCompletionView(context, lesson) : _buildLessonView(context, lesson),
-    ),
     );
   }
 
   Widget _buildLessonView(BuildContext context, Lesson lesson) {
     return Column(
       children: [
-        _buildProgressBar(lesson),
+        if (lesson.steps.isNotEmpty) _buildProgressBar(lesson),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -92,10 +143,14 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                 _buildVideoPlaceholder(lesson),
                 const SizedBox(height: 24),
                 _buildDescription(lesson),
-                const SizedBox(height: 24),
-                _buildStepsSection(lesson),
-                const SizedBox(height: 24),
-                _buildTipsSection(lesson),
+                if (lesson.steps.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _buildStepsSection(lesson),
+                ],
+                if (lesson.tips.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _buildTipsSection(lesson),
+                ],
                 const SizedBox(height: 32),
               ],
             ),
@@ -107,7 +162,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   }
 
   Widget _buildProgressBar(Lesson lesson) {
-    final progress = ((_currentStep + 1) / lesson.steps.length).clamp(0.0, 1.0);
+    final progress =
+        ((_currentStep + 1) / lesson.steps.length).clamp(0.0, 1.0);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Column(
@@ -115,8 +171,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Bước ${_currentStep + 1}/${lesson.steps.length}', style: AppTextStyles.bodySmall),
-              Text('${(progress * 100).toInt()}%', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              Text('Bước ${_currentStep + 1}/${lesson.steps.length}',
+                  style: AppTextStyles.bodySmall),
+              Text('${(progress * 100).toInt()}%',
+                  style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 6),
@@ -125,7 +184,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: AppColors.surfaceElevated,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
               minHeight: 6,
             ),
           ),
@@ -135,7 +195,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   }
 
   Widget _buildVideoPlaceholder(Lesson lesson) {
-    if (lesson.youtubeUrl != null) {
+    if (lesson.youtubeUrl != null && lesson.youtubeUrl!.isNotEmpty) {
       return Container(
         height: 200,
         decoration: BoxDecoration(
@@ -154,7 +214,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: FaIcon(FontAwesomeIcons.play, color: Colors.white, size: 32),
+                child: FaIcon(FontAwesomeIcons.play,
+                    color: Colors.white, size: 32),
               ),
               const SizedBox(height: 8),
               Text('Xem video hướng dẫn', style: AppTextStyles.bodyMedium),
@@ -189,7 +250,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       children: [
         Text('Giới thiệu', style: AppTextStyles.titleLarge),
         const SizedBox(height: 8),
-        Text(lesson.description, style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
+        Text(lesson.description,
+            style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
       ],
     );
   }
@@ -239,11 +301,14 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                     ),
                     child: Center(
                       child: isDone
-                          ? FaIcon(FontAwesomeIcons.squareCheck, color: Colors.white, size: 16)
+                          ? FaIcon(FontAwesomeIcons.squareCheck,
+                              color: Colors.white, size: 16)
                           : Text(
                               '${index + 1}',
                               style: AppTextStyles.bodySmall.copyWith(
-                                color: isCurrent ? Colors.white : AppColors.textMuted,
+                                color: isCurrent
+                                    ? Colors.white
+                                    : AppColors.textMuted,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -254,8 +319,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                     child: Text(
                       step,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: isDone ? AppColors.textMuted : AppColors.textPrimary,
-                        decoration: isDone ? TextDecoration.lineThrough : null,
+                        color: isDone
+                            ? AppColors.textMuted
+                            : AppColors.textPrimary,
+                        decoration:
+                            isDone ? TextDecoration.lineThrough : null,
                         height: 1.5,
                       ),
                     ),
@@ -275,16 +343,20 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       decoration: BoxDecoration(
         color: AppColors.warning.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3), width: 0.5),
+        border: Border.all(
+            color: AppColors.warning.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              FaIcon(FontAwesomeIcons.lightbulb, color: AppColors.warning, size: 18),
+              FaIcon(FontAwesomeIcons.lightbulb,
+                  color: AppColors.warning, size: 18),
               const SizedBox(width: 8),
-              Text('Mẹo luyện tập', style: AppTextStyles.titleMedium.copyWith(color: AppColors.warning)),
+              Text('Mẹo luyện tập',
+                  style: AppTextStyles.titleMedium
+                      .copyWith(color: AppColors.warning)),
             ],
           ),
           const SizedBox(height: 10),
@@ -293,8 +365,13 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('• ', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warning)),
-                    Expanded(child: Text(tip, style: AppTextStyles.bodyMedium.copyWith(height: 1.5))),
+                    Text('• ',
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: AppColors.warning)),
+                    Expanded(
+                        child: Text(tip,
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(height: 1.5))),
                   ],
                 ),
               )),
@@ -304,9 +381,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   }
 
   Widget _buildBottomActions(BuildContext context, Lesson lesson) {
+    final stepCount = lesson.steps.length;
     return Container(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 12,
+        left: 20,
+        right: 20,
+        top: 12,
         bottom: MediaQuery.of(context).padding.bottom + 12,
       ),
       decoration: const BoxDecoration(
@@ -328,17 +408,19 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           Expanded(
             flex: 2,
             child: GradientButton(
-              text: _currentStep < lesson.steps.length - 1 ? 'Bước tiếp theo' : 'Hoàn thành!',
+              text: stepCount == 0 || _currentStep >= stepCount - 1
+                  ? 'Hoàn thành!'
+                  : 'Bước tiếp theo',
               onPressed: () {
-                if (_currentStep < lesson.steps.length - 1) {
+                if (stepCount > 0 && _currentStep < stepCount - 1) {
                   setState(() => _currentStep++);
                 } else {
                   setState(() => _completed = true);
                 }
               },
-              icon: _currentStep < lesson.steps.length - 1
-                  ? FontAwesomeIcons.arrowRight
-                  : FontAwesomeIcons.circleCheck,
+              icon: stepCount == 0 || _currentStep >= stepCount - 1
+                  ? FontAwesomeIcons.circleCheck
+                  : FontAwesomeIcons.arrowRight,
             ),
           ),
         ],
@@ -353,9 +435,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            FaIcon(FontAwesomeIcons.trophy, color: AppColors.primary, size: 80),
+            FaIcon(FontAwesomeIcons.trophy,
+                color: AppColors.primary, size: 80),
             const SizedBox(height: 24),
-            Text('Bài học hoàn thành!', style: AppTextStyles.displayMedium, textAlign: TextAlign.center),
+            Text('Bài học hoàn thành!',
+                style: AppTextStyles.displayMedium,
+                textAlign: TextAlign.center),
             const SizedBox(height: 12),
             Text(
               'Bạn vừa hoàn thành "${lesson.title}"',
@@ -364,20 +449,25 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
             ),
             const SizedBox(height: 24),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  FaIcon(FontAwesomeIcons.star, color: AppColors.primary, size: 32),
+                  FaIcon(FontAwesomeIcons.star,
+                      color: AppColors.primary, size: 32),
                   const SizedBox(width: 12),
                   Column(
                     children: [
-                      Text('+${lesson.xp}', style: AppTextStyles.displayMedium.copyWith(color: AppColors.primary)),
+                      Text('+${lesson.xp}',
+                          style: AppTextStyles.displayMedium
+                              .copyWith(color: AppColors.primary)),
                       Text('XP nhận được', style: AppTextStyles.bodySmall),
                     ],
                   ),
@@ -392,7 +482,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () => context.go('/'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 52)),
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52)),
               child: const Text('Về trang chủ'),
             ),
           ],

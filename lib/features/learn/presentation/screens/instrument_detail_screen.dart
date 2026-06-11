@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../data/instruments_data.dart';
+import '../../../../core/providers/instrument_provider.dart';
 import '../../domain/models/instrument.dart';
 
-class InstrumentDetailScreen extends StatefulWidget {
+class InstrumentDetailScreen extends ConsumerStatefulWidget {
   final String instrumentId;
   const InstrumentDetailScreen({super.key, required this.instrumentId});
 
   @override
-  State<InstrumentDetailScreen> createState() => _InstrumentDetailScreenState();
+  ConsumerState<InstrumentDetailScreen> createState() =>
+      _InstrumentDetailScreenState();
 }
 
-class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
+class _InstrumentDetailScreenState
+    extends ConsumerState<InstrumentDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  Instrument? get _instrument =>
-      kInstruments.where((i) => i.id == widget.instrumentId).firstOrNull;
 
   @override
   void initState() {
@@ -36,15 +36,35 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final inst = _instrument;
-    if (inst == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: Text('Không tìm thấy nhạc cụ')),
-      );
-    }
+    final instrumentAsync =
+        ref.watch(instrumentDetailProvider(widget.instrumentId));
 
-    return Scaffold(
+    return instrumentAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(backgroundColor: AppColors.background),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(backgroundColor: AppColors.background),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Không tải được dữ liệu',
+                  style: AppTextStyles.bodyMedium),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () =>
+                    ref.invalidate(instrumentDetailProvider(widget.instrumentId)),
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (inst) => Scaffold(
       backgroundColor: AppColors.background,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
@@ -65,6 +85,7 @@ class _InstrumentDetailScreenState extends State<InstrumentDetailScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }
