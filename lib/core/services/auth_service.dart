@@ -86,6 +86,14 @@ class AuthService {
     }
   }
 
+  static Future<void> forgotPassword(String email) async {
+    try {
+      await _dio.post('/api/auth/forgot-password', data: {'email': email});
+    } on DioException catch (e) {
+      throw AuthException(_extractMessage(e));
+    }
+  }
+
   static Future<AuthTokens> refreshAccessToken(String refreshToken) async {
     try {
       final res = await _dio.post('/api/auth/refresh-token', data: {
