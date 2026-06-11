@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -134,7 +135,10 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
             ],
           ),
           body: _completed
-              ? _buildCompletionView(context, lesson)
+              ? _CompletionView(
+                  lesson: lesson,
+                  instrumentId: widget.instrumentId,
+                )
               : _buildLessonView(context, lesson),
         ),
       ),
@@ -440,67 +444,297 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
     );
   }
 
-  Widget _buildCompletionView(BuildContext context, Lesson lesson) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FaIcon(FontAwesomeIcons.trophy,
-                color: AppColors.primary, size: 80),
-            const SizedBox(height: 24),
-            Text('Bài học hoàn thành!',
-                style: AppTextStyles.displayMedium,
-                textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            Text(
-              'Bạn vừa hoàn thành "${lesson.title}"',
-              style: AppTextStyles.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FaIcon(FontAwesomeIcons.star,
-                      color: AppColors.primary, size: 32),
-                  const SizedBox(width: 12),
-                  Column(
+}
+
+// ─── Completion animation widget ────────────────────────────────────────────
+
+class _Particle {
+  final double x;
+  final double startY;
+  final double speed;
+  final Color color;
+  final double size;
+  final double rotSpeed;
+  final bool isCircle;
+
+  const _Particle({
+    required this.x,
+    required this.startY,
+    required this.speed,
+    required this.color,
+    required this.size,
+    required this.rotSpeed,
+    required this.isCircle,
+  });
+}
+
+final _kParticles = List<_Particle>.generate(70, (i) {
+  final rng = Random(i * 13 + 7);
+  const colors = [
+    Color(0xFFD97706),
+    Color(0xFFEF4444),
+    Color(0xFF3B82F6),
+    Color(0xFF10B981),
+    Color(0xFFF59E0B),
+    Color(0xFFEC4899),
+    Color(0xFF8B5CF6),
+  ];
+  return _Particle(
+    x: rng.nextDouble(),
+    startY: -rng.nextDouble() * 0.25,
+    speed: 0.55 + rng.nextDouble() * 0.75,
+    color: colors[rng.nextInt(colors.length)],
+    size: 5.0 + rng.nextDouble() * 8.0,
+    rotSpeed: (rng.nextDouble() - 0.5) * 10,
+    isCircle: rng.nextBool(),
+  );
+});
+
+class _ConfettiPainter extends CustomPainter {
+  final double progress;
+
+  const _ConfettiPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final p in _kParticles) {
+      final rawY = p.startY + p.speed * progress;
+      if (rawY > 1.1) continue;
+      final x = p.x * size.width;
+      final y = rawY * size.height;
+      final opacity =
+          rawY > 0.65 ? (1.0 - (rawY - 0.65) / 0.45).clamp(0.0, 1.0) : 1.0;
+      final paint = Paint()
+        ..color = p.color.withValues(alpha: opacity * 0.9);
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(p.rotSpeed * progress);
+      if (p.isCircle) {
+        canvas.drawCircle(Offset.zero, p.size / 2, paint);
+      } else {
+        canvas.drawRect(
+          Rect.fromCenter(
+              center: Offset.zero, width: p.size, height: p.size * 0.5),
+          paint,
+        );
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.progress != progress;
+}
+
+class _CompletionView extends StatefulWidget {
+  final Lesson lesson;
+  final String instrumentId;
+
+  const _CompletionView({required this.lesson, required this.instrumentId});
+
+  @override
+  State<_CompletionView> createState() => _CompletionViewState();
+}
+
+class _CompletionViewState extends State<_CompletionView>
+    with TickerProviderStateMixin {
+  late final AnimationController _entrance;
+  late final AnimationController _confetti;
+  late final AnimationController _pulse;
+
+  late final Animation<double> _trophyScale;
+  late final Animation<double> _contentFade;
+  late final Animation<Offset> _contentSlide;
+  late final Animation<double> _xpFade;
+  late final Animation<Offset> _xpSlide;
+  late final Animation<double> _buttonsFade;
+  late final Animation<int> _xpCount;
+  late final Animation<double> _trophyPulse;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..forward();
+
+    _confetti = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    )..forward();
+
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+
+    _trophyScale = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.0, 0.45, curve: Curves.elasticOut),
+    );
+
+    _contentFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.38, 0.65, curve: Curves.easeOut),
+    );
+
+    _contentSlide = Tween<Offset>(
+      begin: const Offset(0, 0.25),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.38, 0.65, curve: Curves.easeOut),
+    ));
+
+    _xpFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.52, 0.78, curve: Curves.easeOut),
+    );
+
+    _xpSlide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.52, 0.78, curve: Curves.easeOut),
+    ));
+
+    _buttonsFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.72, 1.0, curve: Curves.easeOut),
+    );
+
+    _xpCount = IntTween(begin: 0, end: widget.lesson.xp).animate(
+      CurvedAnimation(
+        parent: _entrance,
+        curve: const Interval(0.52, 0.95, curve: Curves.easeOut),
+      ),
+    );
+
+    _trophyPulse = Tween<double>(begin: 1.0, end: 1.07).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    _confetti.dispose();
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        AnimatedBuilder(
+          animation: _confetti,
+          builder: (ctx, child) => CustomPaint(
+            painter: _ConfettiPainter(_confetti.value),
+            child: const SizedBox.expand(),
+          ),
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedBuilder(
+                  animation: Listenable.merge([_trophyScale, _trophyPulse]),
+                  builder: (ctx, child) => Transform.scale(
+                    scale: _trophyScale.value * _trophyPulse.value,
+                    child: FaIcon(FontAwesomeIcons.trophy,
+                        color: AppColors.primary, size: 80),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                FadeTransition(
+                  opacity: _contentFade,
+                  child: SlideTransition(
+                    position: _contentSlide,
+                    child: Column(
+                      children: [
+                        Text('Bài học hoàn thành!',
+                            style: AppTextStyles.displayMedium,
+                            textAlign: TextAlign.center),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Bạn vừa hoàn thành "${widget.lesson.title}"',
+                          style: AppTextStyles.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                FadeTransition(
+                  opacity: _xpFade,
+                  child: SlideTransition(
+                    position: _xpSlide,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FaIcon(FontAwesomeIcons.star,
+                              color: AppColors.primary, size: 32),
+                          const SizedBox(width: 12),
+                          Column(
+                            children: [
+                              AnimatedBuilder(
+                                animation: _xpCount,
+                                builder: (ctx, child) => Text(
+                                  '+${_xpCount.value}',
+                                  style: AppTextStyles.displayMedium
+                                      .copyWith(color: AppColors.primary),
+                                ),
+                              ),
+                              Text('XP nhận được',
+                                  style: AppTextStyles.bodySmall),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                FadeTransition(
+                  opacity: _buttonsFade,
+                  child: Column(
                     children: [
-                      Text('+${lesson.xp}',
-                          style: AppTextStyles.displayMedium
-                              .copyWith(color: AppColors.primary)),
-                      Text('XP nhận được', style: AppTextStyles.bodySmall),
+                      GradientButton(
+                        text: 'Tiếp tục học',
+                        onPressed: () =>
+                            context.go('/learn/${widget.instrumentId}'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => context.go('/'),
+                        style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 52)),
+                        child: const Text('Về trang chủ'),
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 40),
-            GradientButton(
-              text: 'Tiếp tục học',
-              onPressed: () => context.go('/learn/${widget.instrumentId}'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => context.go('/'),
-              style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 52)),
-              child: const Text('Về trang chủ'),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
