@@ -5,6 +5,7 @@ const _kLocalImages = <String, String>{
   'dan-tranh': 'assets/images/instruments/dan_tranh.png',
   'sao-truc': 'assets/images/instruments/sao_truc.png',
   'dan-bau': 'assets/images/instruments/dan_bau.png',
+  'dan-nguyet': 'assets/images/instruments/dan_nguyet.png',
 };
 
 const _kImageScales = <String, double>{
