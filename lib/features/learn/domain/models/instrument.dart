@@ -1,5 +1,6 @@
 class Lesson {
-  final String id; // slug — dùng cho routing
+  final String id;   // slug — dùng cho routing
+  final String uuid; // UUID — dùng cho API complete lesson
   final String title;
   final String duration;
   final String level;
@@ -12,6 +13,7 @@ class Lesson {
 
   const Lesson({
     required this.id,
+    this.uuid = '',
     required this.title,
     required this.duration,
     required this.level,
@@ -25,6 +27,7 @@ class Lesson {
 
   factory Lesson.fromSummaryJson(Map<String, dynamic> json) => Lesson(
         id: json['slug'] as String,
+        uuid: json['id'] as String? ?? '',
         title: json['title'] as String,
         duration: json['duration'] as String? ?? '',
         level: json['level'] as String? ?? '',
@@ -36,6 +39,7 @@ class Lesson {
 
   factory Lesson.fromDetailJson(Map<String, dynamic> json) => Lesson(
         id: json['slug'] as String,
+        uuid: json['id'] as String? ?? '',
         title: json['title'] as String,
         duration: json['duration'] as String? ?? '',
         level: json['level'] as String? ?? '',

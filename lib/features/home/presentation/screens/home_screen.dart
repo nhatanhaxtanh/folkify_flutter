@@ -5,7 +5,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
-import '../../../learn/data/instruments_data.dart';
+import '../../../../core/providers/instrument_provider.dart';
+import '../../../../core/providers/progress_provider.dart';
+import '../../../../core/services/progress_service.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -20,7 +22,7 @@ class HomeScreen extends ConsumerWidget {
       body: CustomScrollView(
         physics: const ClampingScrollPhysics(),
         slivers: [
-          SliverToBoxAdapter(child: _buildHeader(context, name)),
+          SliverToBoxAdapter(child: _buildHeader(context, name, ref)),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverList(
@@ -34,19 +36,19 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _buildSectionTitle('Nhạc cụ nổi bật'),
                 const SizedBox(height: 12),
-                _buildFeaturedBanner(context),
+                _buildFeaturedBanner(context, ref),
                 const SizedBox(height: 24),
                 _buildSectionTitle('Khám phá nhạc cụ', onTap: () => context.go('/learn')),
                 const SizedBox(height: 12),
-                _buildInstrumentsGrid(context),
+                _buildInstrumentsGrid(context, ref),
                 const SizedBox(height: 24),
                 _buildSectionTitle('Thành tích'),
                 const SizedBox(height: 12),
-                _buildAchievements(),
+                _buildAchievements(ref),
                 const SizedBox(height: 16),
                 _buildSheetMusicBanner(context),
                 const SizedBox(height: 16),
-                _buildStudyTimeCard(),
+                _buildStudyTimeCard(ref),
                 const SizedBox(height: 100),
               ]),
             ),
@@ -56,7 +58,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String name) {
+  Widget _buildHeader(BuildContext context, String name, WidgetRef ref) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.primary,
@@ -154,32 +156,43 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text('Tiến độ học tập', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
-                    const Spacer(),
-                    _statBadge(FontAwesomeIcons.fire, '7', 'streak', const Color(0xFFF97316)),
-                    const SizedBox(width: 12),
-                    _statBadge(FontAwesomeIcons.bolt, '230', 'XP', const Color(0xFFF59E0B)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '7/18 bài',
-                  style: AppTextStyles.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: 7 / 18,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4ADE80)),
-                    minHeight: 8,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text('39% hoàn thành', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
+                Builder(builder: (ctx) {
+                  final p = ref.watch(userProgressProvider).valueOrNull;
+                  final done = p?.totalLessonsCompleted ?? 0;
+                  final total = p?.totalLessons ?? 0;
+                  final pct = total > 0 ? done / total : 0.0;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Tiến độ học tập', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
+                          const Spacer(),
+                          _statBadge(FontAwesomeIcons.fire, '${p?.currentStreak ?? 0}', 'streak', const Color(0xFFF97316)),
+                          const SizedBox(width: 12),
+                          _statBadge(FontAwesomeIcons.bolt, '${p?.totalXp ?? 0}', 'XP', const Color(0xFFF59E0B)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$done${total > 0 ? '/$total' : ''} bài',
+                        style: AppTextStyles.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: pct,
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4ADE80)),
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('${(pct * 100).toInt()}% hoàn thành', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
+                    ],
+                  );
+                }),
               ],
             ),
           ),
@@ -519,8 +532,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeaturedBanner(BuildContext context) {
-    final inst = kInstruments.first;
+  Widget _buildFeaturedBanner(BuildContext context, WidgetRef ref) {
+    final inst = ref.watch(instrumentListProvider).valueOrNull?.firstOrNull;
+    if (inst == null) return const SizedBox(height: 180, child: Center(child: CircularProgressIndicator()));
+
     return GestureDetector(
       onTap: () => context.go('/learn/${inst.id}'),
       child: ClipRRect(
@@ -533,7 +548,8 @@ class HomeScreen extends ConsumerWidget {
               Image.network(
                 inst.imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(color: AppColors.primary),
+                errorBuilder: (_, _, _) => Container(color: AppColors.primary,
+                    child: Center(child: Text(inst.emoji, style: const TextStyle(fontSize: 60)))),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -556,26 +572,18 @@ class HomeScreen extends ConsumerWidget {
                         color: AppColors.primaryLight,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(
-                        inst.category,
-                        style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontSize: 11),
-                      ),
+                      child: Text(inst.category, style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontSize: 11)),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      inst.name,
-                      style: AppTextStyles.headlineMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                    ),
-                    Text('${inst.lessons.length} bài học', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
+                    Text(inst.name, style: AppTextStyles.headlineMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('${inst.lessonCount} bài học', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
                   ],
                 ),
               ),
               Positioned(
-                right: 12,
-                bottom: 12,
+                right: 12, bottom: 12,
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: 36, height: 36,
                   decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                   alignment: Alignment.center,
                   child: FaIcon(FontAwesomeIcons.arrowRight, color: Colors.white, size: 18),
@@ -588,7 +596,9 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInstrumentsGrid(BuildContext context) {
+  Widget _buildInstrumentsGrid(BuildContext context, WidgetRef ref) {
+    final instruments = ref.watch(instrumentListProvider).valueOrNull ?? const [];
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -598,9 +608,9 @@ class HomeScreen extends ConsumerWidget {
         mainAxisSpacing: 10,
         childAspectRatio: 0.82,
       ),
-      itemCount: kInstruments.length,
+      itemCount: instruments.length,
       itemBuilder: (context, index) {
-        final inst = kInstruments[index];
+        final inst = instruments[index];
         return GestureDetector(
           onTap: () => context.go('/learn/${inst.id}'),
           child: ClipRRect(
@@ -619,8 +629,7 @@ class HomeScreen extends ConsumerWidget {
                       child: Image.network(
                         inst.imageUrl,
                         fit: BoxFit.contain,
-                        errorBuilder: (context, error, stack) =>
-                            Center(child: Text(inst.emoji, style: const TextStyle(fontSize: 36))),
+                        errorBuilder: (_, _, _) => Center(child: Text(inst.emoji, style: const TextStyle(fontSize: 36))),
                       ),
                     ),
                   ),
@@ -648,16 +657,17 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAchievements() {
-    final items = [
-      (FontAwesomeIcons.fire, '7 ngày liên tiếp', const Color(0xFFF97316)),
-      (FontAwesomeIcons.star, 'Nhạc cụ đầu tiên', const Color(0xFFF59E0B)),
-      (FontAwesomeIcons.trophy, 'Hoàn thành 5 bài', AppColors.primary),
-    ];
+  Widget _buildAchievements(WidgetRef ref) {
+    final data = ref.watch(achievementsProvider).valueOrNull;
+    final items = data?.unlocked.take(3).toList() ?? const <Achievement>[];
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
     return Row(
       children: items.asMap().entries.map((entry) {
         final i = entry.key;
-        final item = entry.value;
+        final badge = entry.value;
+        final color = _badgeColor(badge.icon);
         return Expanded(
           child: Container(
             margin: i < items.length - 1 ? const EdgeInsets.only(right: 10) : EdgeInsets.zero,
@@ -669,14 +679,10 @@ class HomeScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                FaIcon(item.$1, color: item.$3, size: 26),
+                FaIcon(_badgeIcon(badge.icon), color: color, size: 26),
                 const SizedBox(height: 6),
-                Text(
-                  item.$2,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
-                  maxLines: 2,
-                ),
+                Text(badge.name, textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySmall.copyWith(fontSize: 11), maxLines: 2),
               ],
             ),
           ),
@@ -684,6 +690,23 @@ class HomeScreen extends ConsumerWidget {
       }).toList(),
     );
   }
+
+  FaIconData _badgeIcon(String icon) => switch (icon) {
+    'bullseye' => FontAwesomeIcons.bullseye,
+    'star' => FontAwesomeIcons.star,
+    'trophy' => FontAwesomeIcons.trophy,
+    'fire' => FontAwesomeIcons.fire,
+    'crown' => FontAwesomeIcons.crown,
+    'music' => FontAwesomeIcons.music,
+    _ => FontAwesomeIcons.medal,
+  };
+
+  Color _badgeColor(String icon) => switch (icon) {
+    'fire' => const Color(0xFFF97316),
+    'star' || 'crown' => const Color(0xFFF59E0B),
+    'trophy' => const Color(0xFFDC2626),
+    _ => AppColors.primary,
+  };
 
   Widget _buildSheetMusicBanner(BuildContext context) {
     return GestureDetector(
@@ -727,7 +750,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStudyTimeCard() {
+  Widget _buildStudyTimeCard(WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -753,7 +776,11 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Text('Thời gian học hôm nay', style: AppTextStyles.bodySmall),
               const SizedBox(height: 2),
-              Text('45 phút', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w700)),
+              Builder(builder: (ctx) {
+                    final p = ref.watch(weeklyActivityProvider).valueOrNull;
+                    final todayMinutes = p?.where((d) => d.isToday).firstOrNull?.minutes ?? 0;
+                    return Text('$todayMinutes phút', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w700));
+                  }),
             ],
           ),
           const Spacer(),

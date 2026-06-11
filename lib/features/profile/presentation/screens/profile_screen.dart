@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/providers/progress_provider.dart';
 import '../../../../core/services/biometric_service.dart';
 import '../../../../core/services/user_service.dart';
 
@@ -33,11 +34,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final available = await BiometricService.isAvailable();
     final enabled = await ref.read(authStateProvider.notifier).isBiometricEnabled();
     final info = await BiometricService.getBiometricInfo();
-    if (mounted) setState(() {
-      _biometricAvailable = available;
-      _biometricEnabled = enabled;
-      _biometricInfo = info;
-    });
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+        _biometricInfo = info;
+      });
+    }
   }
 
   @override
@@ -236,19 +239,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
           const SizedBox(height: 4),
           Text(
-            'Học viên · 30 ngày',
+            'Học viên',
             style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.75)),
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              _StatChip(icon: FontAwesomeIcons.clock, value: '7', label: 'Bài học'),
-              const SizedBox(width: 10),
-              _StatChip(icon: FontAwesomeIcons.fire, value: '7', label: 'Streak'),
-              const SizedBox(width: 10),
-              _StatChip(icon: FontAwesomeIcons.bolt, value: '230', label: 'XP'),
-            ],
-          ),
+          Builder(builder: (context) {
+            final progress = ref.watch(userProgressProvider).valueOrNull;
+            return Row(
+              children: [
+                _StatChip(icon: FontAwesomeIcons.clock, value: '${progress?.totalLessonsCompleted ?? 0}', label: 'Bài học'),
+                const SizedBox(width: 10),
+                _StatChip(icon: FontAwesomeIcons.fire, value: '${progress?.currentStreak ?? 0}', label: 'Streak'),
+                const SizedBox(width: 10),
+                _StatChip(icon: FontAwesomeIcons.bolt, value: '${progress?.totalXp ?? 0}', label: 'XP'),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -336,16 +342,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildActivityChart() {
-    const data = [
-      ('T2', 40.0, false),
-      ('T3', 55.0, false),
-      ('T4', 30.0, false),
-      ('T5', 70.0, false),
-      ('T6', 80.0, true),
-      ('T7', 50.0, false),
-      ('CN', 35.0, false),
-    ];
+    final activity = ref.watch(weeklyActivityProvider).valueOrNull;
     const maxH = 80.0;
+
+    final data = activity ?? const [];
+    final maxMinutes = data.isEmpty ? 1 : data.map((d) => d.minutes).reduce((a, b) => a > b ? a : b).clamp(1, 9999);
+    final totalMinutes = data.fold(0, (sum, d) => sum + d.minutes);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -361,42 +363,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           const SizedBox(height: 16),
           SizedBox(
             height: maxH + 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: data.map((d) {
-                final barH = (d.$2 / 80.0) * maxH;
-                final isToday = d.$3;
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Container(
-                      width: 28,
-                      height: barH,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isToday
-                              ? [const Color(0xFF166534), AppColors.primary]
-                              : [const Color(0xFF4ADE80), AppColors.primary],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      d.$1,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        fontSize: 10,
-                        color: isToday ? AppColors.primary : AppColors.textMuted,
-                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ),
+            child: data.isEmpty
+                ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: data.map((d) {
+                      final barH = ((d.minutes / maxMinutes) * maxH).clamp(4.0, maxH);
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: 28,
+                            height: barH,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: d.isToday
+                                    ? [const Color(0xFF166534), AppColors.primary]
+                                    : [const Color(0xFF4ADE80), AppColors.primary],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            d.dayLabel,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 10,
+                              color: d.isToday ? AppColors.primary : AppColors.textMuted,
+                              fontWeight: d.isToday ? FontWeight.w700 : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
           ),
           const SizedBox(height: 10),
           const Divider(height: 1),
@@ -407,7 +410,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               children: [
                 const TextSpan(text: 'Tổng: '),
                 TextSpan(
-                  text: '225 phút',
+                  text: '$totalMinutes phút',
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
                 ),
                 const TextSpan(text: ' trong tuần'),
@@ -420,14 +423,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildInstrumentProgress() {
-    const instruments = [
-      ('Đàn Tranh', 70, 2, 5),
-      ('Sáo Trúc', 65, 2, 4),
-      ('Đàn Bầu', 30, 1, 3),
-      ('Đàn Nguyệt', 30, 1, 2),
-      ('Đàn Nhị', 0, 0, 2),
-      ('Đàn Tỳ Bà', 35, 1, 2),
-    ];
+    final instruments = ref.watch(userProgressProvider).valueOrNull?.instruments ?? const [];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -441,35 +437,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         children: [
           Text('Tiến độ theo nhạc cụ', style: AppTextStyles.titleMedium),
           const SizedBox(height: 14),
-          ...instruments.asMap().entries.map((e) {
-            final i = e.key;
-            final inst = e.value;
-            final xp = inst.$2;
-            final done = inst.$3;
-            final total = inst.$4;
-            final progress = total > 0 ? done / total : 0.0;
-            return Padding(
-              padding: EdgeInsets.only(top: i > 0 ? 12 : 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(inst.$1, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w500)),
-                      ),
-                      if (xp > 0) ...[
-                        FaIcon(FontAwesomeIcons.bolt, color: const Color(0xFFF59E0B), size: 11),
-                        const SizedBox(width: 3),
-                        Text('$xp XP', style: AppTextStyles.bodySmall.copyWith(
-                          color: const Color(0xFFF59E0B), fontWeight: FontWeight.w600,
-                        )),
-                        const SizedBox(width: 8),
+          if (instruments.isEmpty)
+            Center(child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('Chưa có dữ liệu', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
+            ))
+          else
+            ...instruments.asMap().entries.map((e) {
+              final i = e.key;
+              final inst = e.value;
+              final progress = inst.totalLessons > 0 ? inst.completedLessons / inst.totalLessons : 0.0;
+              return Padding(
+                padding: EdgeInsets.only(top: i > 0 ? 12 : 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(inst.emoji, style: const TextStyle(fontSize: 14)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(inst.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w500)),
+                        ),
+                        Text('${inst.completedLessons}/${inst.totalLessons}',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
                       ],
-                      Text('$done/$total', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
-                    ],
-                  ),
-                  if (xp > 0) ...[
+                    ),
                     const SizedBox(height: 5),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
@@ -481,16 +474,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       ),
                     ),
                   ],
-                ],
-              ),
-            );
-          }),
+                ),
+              );
+            }),
         ],
       ),
     );
   }
 
   Widget _buildStreakCard() {
+    final progress = ref.watch(userProgressProvider).valueOrNull;
+    final streak = progress?.currentStreak ?? 0;
+    final longest = progress?.longestStreak ?? 0;
+    final displayStreak = streak.clamp(0, 14);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -517,10 +514,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('7 ngày liên tiếp!', style: AppTextStyles.titleMedium.copyWith(
-                    color: const Color(0xFFF97316), fontWeight: FontWeight.w700,
-                  )),
-                  Text('Hãy giữ vững phong độ', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
+                  Text(
+                    streak > 0 ? '$streak ngày liên tiếp!' : 'Bắt đầu streak hôm nay!',
+                    style: AppTextStyles.titleMedium.copyWith(color: const Color(0xFFF97316), fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    longest > 0 ? 'Kỷ lục: $longest ngày' : 'Hãy giữ vững phong độ',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+                  ),
                 ],
               ),
             ],
@@ -532,7 +533,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 height: 22,
                 decoration: BoxDecoration(
-                  color: i < 7
+                  color: i < displayStreak
                       ? const Color(0xFFF97316)
                       : const Color(0xFFF97316).withValues(alpha: 0.15),
                   shape: BoxShape.circle,
@@ -550,57 +551,76 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildBadgesTab() {
-    final badges = [
-      (FontAwesomeIcons.bullseye, 'Bắt đầu', const Color(0xFF16A34A), true),
-      (FontAwesomeIcons.fire, '7 ngày', const Color(0xFFF97316), true),
-      (FontAwesomeIcons.music, 'Đầu tiên', AppColors.primary, true),
-      (FontAwesomeIcons.star, '100 XP', const Color(0xFFF59E0B), false),
-      (FontAwesomeIcons.crown, 'Master', const Color(0xFFF59E0B), false),
-      (FontAwesomeIcons.trophy, 'Champion', const Color(0xFFDC2626), false),
-    ];
+    final achievementsAsync = ref.watch(achievementsProvider);
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      child: GridView.count(
-        crossAxisCount: 3,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 0.9,
-        children: badges.map((b) {
-          final unlocked = b.$4;
-          final color = unlocked ? b.$3 : AppColors.textMuted.withValues(alpha: 0.3);
-          return Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: unlocked ? b.$3.withValues(alpha: 0.1) : AppColors.surfaceCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: unlocked ? b.$3.withValues(alpha: 0.35) : AppColors.border,
-                width: 0.5,
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FaIcon(b.$1, color: color, size: 30),
-                const SizedBox(height: 8),
-                Text(b.$2,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: unlocked ? AppColors.textPrimary : AppColors.textMuted,
-                    fontWeight: unlocked ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                  textAlign: TextAlign.center,
+    return achievementsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Center(
+        child: TextButton(
+          onPressed: () => ref.invalidate(achievementsProvider),
+          child: const Text('Thử lại'),
+        ),
+      ),
+      data: (data) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        child: GridView.count(
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 0.9,
+          children: data.all.map((badge) {
+            final color = badge.unlocked ? _badgeColor(badge.icon) : AppColors.textMuted.withValues(alpha: 0.3);
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: badge.unlocked ? _badgeColor(badge.icon).withValues(alpha: 0.1) : AppColors.surfaceCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: badge.unlocked ? _badgeColor(badge.icon).withValues(alpha: 0.35) : AppColors.border,
+                  width: 0.5,
                 ),
-              ],
-            ),
-          );
-        }).toList(),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FaIcon(_badgeIcon(badge.icon), color: color, size: 30),
+                  const SizedBox(height: 8),
+                  Text(
+                    badge.name,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: badge.unlocked ? AppColors.textPrimary : AppColors.textMuted,
+                      fontWeight: badge.unlocked ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
+
+  FaIconData _badgeIcon(String icon) => switch (icon) {
+    'bullseye' => FontAwesomeIcons.bullseye,
+    'star' => FontAwesomeIcons.star,
+    'trophy' => FontAwesomeIcons.trophy,
+    'fire' => FontAwesomeIcons.fire,
+    'crown' => FontAwesomeIcons.crown,
+    'music' => FontAwesomeIcons.music,
+    _ => FontAwesomeIcons.medal,
+  };
+
+  Color _badgeColor(String icon) => switch (icon) {
+    'fire' => const Color(0xFFF97316),
+    'star' || 'crown' => const Color(0xFFF59E0B),
+    'trophy' => const Color(0xFFDC2626),
+    _ => AppColors.primary,
+  };
 
   Widget _buildSettingsTab(BuildContext context) {
     final menuItems = [

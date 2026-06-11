@@ -5,6 +5,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/instrument_provider.dart';
+import '../../../../core/providers/progress_provider.dart';
+import '../../../../core/services/progress_service.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../domain/models/instrument.dart';
 
@@ -25,6 +27,16 @@ class LessonDetailScreen extends ConsumerStatefulWidget {
 class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   int _currentStep = 0;
   bool _completed = false;
+
+  Future<void> _finishLesson(Lesson lesson) async {
+    setState(() => _completed = true);
+    if (lesson.uuid.isEmpty) return;
+    try {
+      await ProgressService.completeLesson(lesson.uuid);
+      ref.invalidate(userProgressProvider);
+      ref.invalidate(achievementsProvider);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -415,7 +427,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
                 if (stepCount > 0 && _currentStep < stepCount - 1) {
                   setState(() => _currentStep++);
                 } else {
-                  setState(() => _completed = true);
+                  _finishLesson(lesson);
                 }
               },
               icon: stepCount == 0 || _currentStep >= stepCount - 1
