@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -17,14 +18,25 @@ class BiometricService {
   static Future<BiometricInfo> getBiometricInfo() async {
     try {
       final biometrics = await _auth.getAvailableBiometrics();
-      if (biometrics.contains(BiometricType.face)) {
-        return (label: 'Face ID', icon: Icons.face_retouching_natural_rounded);
-      }
-      if (biometrics.contains(BiometricType.fingerprint)) {
-        return (label: 'Vân tay', icon: Icons.fingerprint_rounded);
+      if (Platform.isAndroid) {
+        if (biometrics.contains(BiometricType.fingerprint)) {
+          return (label: 'Vân tay', icon: Icons.fingerprint_rounded);
+        }
+        if (biometrics.contains(BiometricType.face)) {
+          return (label: 'Khuôn mặt', icon: Icons.face_retouching_natural_rounded);
+        }
+      } else {
+        if (biometrics.contains(BiometricType.face)) {
+          return (label: 'Face ID', icon: Icons.face_retouching_natural_rounded);
+        }
+        if (biometrics.contains(BiometricType.fingerprint)) {
+          return (label: 'Vân tay', icon: Icons.fingerprint_rounded);
+        }
       }
     } catch (_) {}
-    return (label: 'Sinh trắc học', icon: Icons.lock_open_rounded);
+    return Platform.isAndroid
+        ? (label: 'Vân tay', icon: Icons.fingerprint_rounded)
+        : (label: 'Sinh trắc học', icon: Icons.lock_open_rounded);
   }
 
   static Future<bool> authenticate() async {

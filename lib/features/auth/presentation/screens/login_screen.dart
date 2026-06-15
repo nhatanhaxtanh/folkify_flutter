@@ -26,7 +26,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool _isGoogleLoading = false;
   bool _isBiometricLoading = false;
   bool _biometricReady = false;
-  BiometricInfo _biometricInfo = (label: 'Face ID', icon: Icons.face_retouching_natural_rounded);
+  BiometricInfo _biometricInfo = (label: 'Sinh trắc học', icon: Icons.fingerprint_rounded);
   String? _errorMessage;
 
   late final AnimationController _exitCtrl;

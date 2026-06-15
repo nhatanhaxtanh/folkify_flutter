@@ -27,6 +27,7 @@ class ApiClient {
 class _AuthInterceptor extends Interceptor {
   final Dio dio;
   bool _isRefreshing = false;
+  final List<({RequestOptions opts, ErrorInterceptorHandler handler})> _queue = [];
 
   _AuthInterceptor(this.dio);
 
@@ -43,29 +44,55 @@ class _AuthInterceptor extends Interceptor {
   @override
   Future<void> onError(
       DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401 && !_isRefreshing) {
-      _isRefreshing = true;
-      try {
-        final refreshToken = await TokenStorage.getRefreshToken();
-        if (refreshToken != null) {
-          final tokens = await AuthService.refreshAccessToken(refreshToken);
-          await TokenStorage.saveTokens(
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-          );
-          final opts = err.requestOptions;
-          opts.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
-          final response = await dio.fetch(opts);
-          handler.resolve(response);
-          return;
-        }
-      } catch (_) {
-        await TokenStorage.clearTokens();
-        ApiClient.onSessionExpired?.call();
-      } finally {
-        _isRefreshing = false;
-      }
+    if (err.response?.statusCode != 401) {
+      handler.next(err);
+      return;
     }
+
+    if (_isRefreshing) {
+      _queue.add((opts: err.requestOptions, handler: handler));
+      return;
+    }
+
+    _isRefreshing = true;
+    try {
+      final refreshToken = await TokenStorage.getRefreshToken();
+      if (refreshToken != null) {
+        final tokens = await AuthService.refreshAccessToken(refreshToken);
+        await TokenStorage.saveTokens(
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        );
+        final newToken = tokens.accessToken;
+
+        // Retry original request
+        err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+        final response = await dio.fetch(err.requestOptions);
+        handler.resolve(response);
+
+        // Retry all queued requests
+        for (final pending in _queue) {
+          pending.opts.headers['Authorization'] = 'Bearer $newToken';
+          try {
+            final r = await dio.fetch(pending.opts);
+            pending.handler.resolve(r);
+          } catch (e) {
+            pending.handler.next(e is DioException ? e : DioException(requestOptions: pending.opts));
+          }
+        }
+        return;
+      }
+    } catch (_) {
+      for (final pending in _queue) {
+        pending.handler.next(DioException(requestOptions: pending.opts));
+      }
+      await TokenStorage.clearTokens();
+      ApiClient.onSessionExpired?.call();
+    } finally {
+      _queue.clear();
+      _isRefreshing = false;
+    }
+
     handler.next(err);
   }
 }

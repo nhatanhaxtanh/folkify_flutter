@@ -13,7 +13,7 @@ class BiometricLockScreen extends ConsumerStatefulWidget {
 
 class _BiometricLockScreenState extends ConsumerState<BiometricLockScreen> {
   bool _isAuthenticating = false;
-  BiometricInfo _biometricInfo = (label: 'Face ID', icon: Icons.face_retouching_natural_rounded);
+  BiometricInfo _biometricInfo = (label: 'Sinh trắc học', icon: Icons.fingerprint_rounded);
 
   @override
   void initState() {
