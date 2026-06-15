@@ -24,7 +24,7 @@ class _SheetMusicScreenState extends State<SheetMusicScreen> {
     _Sheet(title: 'Bèo Dạt Mây Trôi', author: 'Dân ca Bắc Bộ', genre: 'Dân ca', difficulty: 'Dễ', pages: 3, isPremium: true),
     _Sheet(title: 'Tiếng Đàn Bầu', author: 'Nguyễn Đình Phúc', genre: 'Nhạc mới', difficulty: 'Trung bình', pages: 3, isPremium: true),
     _Sheet(title: 'Thủy Hành Vân', author: 'Nhạc lễ Nam Bộ', genre: 'Nhạc cổ', difficulty: 'Khó', pages: 6, isPremium: true),
-    _Sheet(title: 'Trống Cơm', author: 'Dân ca Quan họ', genre: 'Dân ca', difficulty: 'Dễ', pages: 2, isPremium: false),
+    _Sheet(title: 'Tứ Đại Cảnh', author: 'Nhã nhạc cung đình Huế', genre: 'Cổ nhạc', difficulty: 'Trung bình', pages: 3, isPremium: false),
     _Sheet(title: 'Xuân Về Trên Bản', author: 'Hoàng Việt', genre: 'Nhạc mới', difficulty: 'Trung bình', pages: 4, isPremium: true),
     _Sheet(title: 'Lý Ngựa Ô', author: 'Dân ca Bắc Bộ', genre: 'Dân ca', difficulty: 'Dễ', pages: 2, isPremium: false),
   ];
