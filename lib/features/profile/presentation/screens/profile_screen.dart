@@ -342,10 +342,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildActivityChart() {
-    final activity = ref.watch(weeklyActivityProvider).valueOrNull;
+    final asyncActivity = ref.watch(weeklyActivityProvider);
     const maxH = 80.0;
 
-    final data = activity ?? const [];
+    final data = asyncActivity.valueOrNull ?? const [];
     final maxMinutes = data.isEmpty ? 1 : data.map((d) => d.minutes).reduce((a, b) => a > b ? a : b).clamp(1, 9999);
     final totalMinutes = data.fold(0, (sum, d) => sum + d.minutes);
 
@@ -363,8 +363,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           const SizedBox(height: 16),
           SizedBox(
             height: maxH + 24,
-            child: data.isEmpty
+            child: asyncActivity.isLoading
                 ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                : asyncActivity.hasError || data.isEmpty
+                    ? Center(
+                        child: Text(
+                          asyncActivity.hasError ? 'Không thể tải dữ liệu' : 'Chưa có hoạt động tuần này',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+                        ),
+                      )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,

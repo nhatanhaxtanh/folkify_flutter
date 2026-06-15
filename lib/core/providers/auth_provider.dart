@@ -81,11 +81,27 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<bool> authenticateWithBiometric() async {
     final success = await BiometricService.authenticate();
-    if (success) {
-      final prefs = await SharedPreferences.getInstance();
-      state = _buildLoggedInState(prefs);
+    if (!success) return false;
+    try {
+      final refreshToken = await TokenStorage.getRefreshToken();
+      if (refreshToken != null) {
+        final tokens = await AuthService.refreshAccessToken(refreshToken);
+        await _persistUser(tokens);
+        state = AuthState(
+          isLoggedIn: true,
+          userEmail: tokens.user.email,
+          userName: tokens.user.name,
+          userId: tokens.user.id,
+          role: tokens.user.role,
+        );
+        return true;
+      }
+    } catch (_) {
+      // Không có mạng hoặc refresh thất bại — dùng credentials đã lưu
     }
-    return success;
+    final prefs = await SharedPreferences.getInstance();
+    state = _buildLoggedInState(prefs);
+    return true;
   }
 
   Future<void> skipBiometric() async {
