@@ -52,7 +52,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     (
       question: 'Nhạc cụ nào thuộc họ dây gảy?',
       hint: 'Gợi ý: Được gảy bằng ngón tay hoặc miếng gảy',
-      options: ['Sáo Trúc', 'Đàn Tranh', 'Trống Cơm', 'Cồng Chiêng'],
+      options: ['Sáo Trúc', 'Đàn Tranh', 'Đàn Tỳ Bà', 'Cồng Chiêng'],
       correct: 1,
       fact: 'Đàn tranh có 16–17 dây, mỗi dây gảy tạo ra âm thanh riêng biệt và rất phong phú.',
     ),

@@ -462,7 +462,7 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildContinueLearning(BuildContext context) {
     final lessons = [
       {'title': 'Bài Lý Con Sáo', 'sub': 'Đàn Tranh', 'progress': 0.35, 'color': const Color(0xFFF59E0B)},
-      {'title': 'Bài Trống Cơm', 'sub': 'Sáo Trúc', 'progress': 0.60, 'color': AppColors.primaryLight},
+      {'title': 'Bài Tứ Đại Cảnh', 'sub': 'Đàn Tỳ Bà', 'progress': 0.60, 'color': AppColors.primaryLight},
     ];
 
     return Column(

@@ -8,6 +8,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/instrument_provider.dart';
 import '../../../../core/providers/progress_provider.dart';
 import '../../../../core/services/progress_service.dart';
+import '../../../../core/widgets/celebration_overlay.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../domain/models/instrument.dart';
 
@@ -28,12 +29,16 @@ class LessonDetailScreen extends ConsumerStatefulWidget {
 class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   int _currentStep = 0;
   bool _completed = false;
+  CompleteLessonResult? _lessonResult;
+  int _prevStreak = 0;
 
   Future<void> _finishLesson(Lesson lesson) async {
+    _prevStreak = ref.read(userProgressProvider).valueOrNull?.currentStreak ?? 0;
     setState(() => _completed = true);
     if (lesson.uuid.isEmpty) return;
     try {
-      await ProgressService.completeLesson(lesson.uuid);
+      final result = await ProgressService.completeLesson(lesson.uuid);
+      if (mounted) setState(() => _lessonResult = result);
       ref.invalidate(userProgressProvider);
       ref.invalidate(achievementsProvider);
     } catch (_) {}
@@ -138,6 +143,8 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
               ? _CompletionView(
                   lesson: lesson,
                   instrumentId: widget.instrumentId,
+                  result: _lessonResult,
+                  previousStreak: _prevStreak,
                 )
               : _buildLessonView(context, lesson),
         ),
@@ -526,8 +533,15 @@ class _ConfettiPainter extends CustomPainter {
 class _CompletionView extends StatefulWidget {
   final Lesson lesson;
   final String instrumentId;
+  final CompleteLessonResult? result;
+  final int previousStreak;
 
-  const _CompletionView({required this.lesson, required this.instrumentId});
+  const _CompletionView({
+    required this.lesson,
+    required this.instrumentId,
+    required this.previousStreak,
+    this.result,
+  });
 
   @override
   State<_CompletionView> createState() => _CompletionViewState();
@@ -547,6 +561,8 @@ class _CompletionViewState extends State<_CompletionView>
   late final Animation<double> _buttonsFade;
   late final Animation<int> _xpCount;
   late final Animation<double> _trophyPulse;
+
+  bool _celebrationDone = false;
 
   @override
   void initState() {
@@ -616,6 +632,56 @@ class _CompletionViewState extends State<_CompletionView>
       CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
     );
 
+    _entrance.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _maybeTriggerCelebrations();
+    });
+  }
+
+  @override
+  void didUpdateWidget(_CompletionView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.result == null && widget.result != null) {
+      _maybeTriggerCelebrations();
+    }
+  }
+
+  void _maybeTriggerCelebrations() {
+    if (_celebrationDone) return;
+    if (!_entrance.isCompleted) return;
+    if (widget.result == null) return;
+    if (!mounted) return;
+    _celebrationDone = true;
+    _triggerCelebrations();
+  }
+
+  Future<void> _triggerCelebrations() async {
+    final result = widget.result!;
+    for (final ach in result.newAchievements) {
+      if (!mounted) return;
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        barrierLabel: '',
+        barrierColor: Colors.transparent,
+        transitionDuration: Duration.zero,
+        pageBuilder: (ctx, anim1, anim2) => CelebrationOverlay.achievement(ach),
+      );
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 220));
+    }
+    const milestones = {3, 7, 14, 30, 60, 100};
+    if (result.currentStreak > widget.previousStreak &&
+        milestones.contains(result.currentStreak)) {
+      if (!mounted) return;
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        barrierLabel: '',
+        barrierColor: Colors.transparent,
+        transitionDuration: Duration.zero,
+        pageBuilder: (ctx, anim1, anim2) => CelebrationOverlay.streak(result.currentStreak),
+      );
+    }
   }
 
   @override
