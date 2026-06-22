@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 
@@ -389,7 +390,13 @@ class _SheetCard extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        if (sheet.isPremium) {
+                          context.push('/premium');
+                        } else {
+                          _showDownloadSheet(context, sheet);
+                        }
+                      },
                       icon: FaIcon(
                         sheet.isPremium ? FontAwesomeIcons.lock : FontAwesomeIcons.download,
                         size: 11, color: Colors.white,
@@ -410,6 +417,103 @@ class _SheetCard extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+void _showDownloadSheet(BuildContext context, _Sheet sheet) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _DownloadBottomSheet(sheet: sheet),
+  );
+}
+
+class _DownloadBottomSheet extends StatefulWidget {
+  final _Sheet sheet;
+  const _DownloadBottomSheet({required this.sheet});
+
+  @override
+  State<_DownloadBottomSheet> createState() => _DownloadBottomSheetState();
+}
+
+class _DownloadBottomSheetState extends State<_DownloadBottomSheet> {
+  bool _downloading = false;
+  bool _done = false;
+
+  Future<void> _download() async {
+    setState(() => _downloading = true);
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() { _downloading = false; _done = true; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: const Center(child: FaIcon(FontAwesomeIcons.fileLines, color: AppColors.primary, size: 20)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.sheet.title, style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text('${widget.sheet.author} · ${widget.sheet.pages} trang',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          if (_done)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 22),
+                const SizedBox(width: 8),
+                Text('Đã lưu vào thư viện', style: AppTextStyles.bodyMedium.copyWith(
+                  color: const Color(0xFF16A34A), fontWeight: FontWeight.w600,
+                )),
+              ],
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _downloading ? null : _download,
+                icon: _downloading
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const FaIcon(FontAwesomeIcons.download, size: 16, color: Colors.white),
+                label: Text(_downloading ? 'Đang tải...' : 'Tải xuống PDF'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryDark,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                  textStyle: AppTextStyles.labelLarge.copyWith(fontSize: 15),
+                ),
+              ),
+            ),
         ],
       ),
     );
