@@ -28,8 +28,25 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
 
   Future<void> _purchase() async {
     final iap = ref.read(iapProvider);
+
+    if (!iap.isStoreAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('App Store không khả dụng trên thiết bị này')),
+      );
+      return;
+    }
+
     final product = _findProduct(iap.products, _selectedPlanId);
-    if (product == null) return;
+    if (product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không tải được thông tin sản phẩm. Vui lòng thử lại sau.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     await ref.read(iapProvider.notifier).purchase(product);
   }
 
@@ -66,9 +83,6 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
     final basicProduct = _findProduct(iap.products, kBasicPlanId);
     final proProduct = _findProduct(iap.products, kProPlanId);
 
-    final selectedProduct = _findProduct(iap.products, _selectedPlanId);
-    final canPurchase = iap.isStoreAvailable && selectedProduct != null && !iap.isLoading;
-
     String buttonText;
     if (iap.isPremium) {
       buttonText = 'Đang hoạt động';
@@ -104,7 +118,7 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                   GradientButton(
                     text: buttonText,
                     isLoading: iap.isLoading,
-                    onPressed: iap.isPremium ? null : (canPurchase ? _purchase : null),
+                    onPressed: iap.isPremium ? null : _purchase,
                     icon: FontAwesomeIcons.crown,
                   ),
                   const SizedBox(height: 12),
