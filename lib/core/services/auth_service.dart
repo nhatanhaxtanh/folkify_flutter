@@ -86,6 +86,18 @@ class AuthService {
     }
   }
 
+  static Future<AuthTokens> loginWithApple(String identityToken, {String? fullName}) async {
+    try {
+      final res = await _dio.post('/api/auth/apple', data: {
+        'identityToken': identityToken,
+        if (fullName != null && fullName.isNotEmpty) 'fullName': fullName,
+      });
+      return _parseAuthResponse(res.data);
+    } on DioException catch (e) {
+      throw AuthException(_extractMessage(e));
+    }
+  }
+
   static Future<void> forgotPassword(String email) async {
     try {
       await _dio.post('/api/auth/forgot-password', data: {'email': email});

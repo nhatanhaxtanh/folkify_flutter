@@ -24,6 +24,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool _obscurePass = true;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
   bool _isBiometricLoading = false;
   bool _biometricReady = false;
   BiometricInfo _biometricInfo = (label: 'Sinh trắc học', icon: Icons.fingerprint_rounded);
@@ -152,6 +153,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     _buildDivider(),
                     const SizedBox(height: 16),
                     _buildGoogleButton(),
+                    const SizedBox(height: 12),
+                    _buildAppleButton(),
                     const SizedBox(height: 20),
                     _buildRegisterLink(),
                   ],
@@ -422,6 +425,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     'Đăng nhập với Google',
                     style: AppTextStyles.labelLarge.copyWith(
                       color: const Color(0xFF3C4043),
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildAppleButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isAppleLoading ? null : () async {
+          setState(() => _isAppleLoading = true);
+          try {
+            final success = await ref.read(authStateProvider.notifier).loginWithApple();
+            if (success && mounted) context.go('/');
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Đăng nhập Apple thất bại: $e'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          } finally {
+            if (mounted) setState(() => _isAppleLoading = false);
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+        ),
+        child: _isAppleLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.apple, size: 22, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Đăng nhập với Apple',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      color: Colors.white,
                       fontSize: 15,
                     ),
                   ),
