@@ -62,12 +62,13 @@ class IapNotifier extends Notifier<IapState> {
     bool available = false;
     try {
       available = await InAppPurchase.instance.isAvailable();
-    } catch (_) {
+    } catch (e) {
       state = IapState(
         isPremium: activePlanId != null,
         activePlanId: activePlanId,
         isStoreAvailable: false,
         isLoading: false,
+        purchaseError: 'isAvailable error: $e',
       );
       return;
     }

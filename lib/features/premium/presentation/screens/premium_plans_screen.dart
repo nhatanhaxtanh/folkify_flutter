@@ -30,8 +30,12 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
     final iap = ref.read(iapProvider);
 
     if (!iap.isStoreAvailable) {
+      final detail = iap.purchaseError != null ? '\n${iap.purchaseError}' : '';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('App Store không khả dụng trên thiết bị này')),
+        SnackBar(
+          content: Text('App Store không khả dụng$detail'),
+          duration: const Duration(seconds: 8),
+        ),
       );
       return;
     }
