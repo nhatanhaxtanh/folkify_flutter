@@ -59,7 +59,19 @@ class IapNotifier extends Notifier<IapState> {
     final prefs = await SharedPreferences.getInstance();
     final activePlanId = prefs.getString(_keyActivePlan);
 
-    final available = await InAppPurchase.instance.isAvailable();
+    bool available = false;
+    try {
+      available = await InAppPurchase.instance.isAvailable();
+    } catch (_) {
+      state = IapState(
+        isPremium: activePlanId != null,
+        activePlanId: activePlanId,
+        isStoreAvailable: false,
+        isLoading: false,
+      );
+      return;
+    }
+
     if (!available) {
       state = IapState(
         isPremium: activePlanId != null,
@@ -75,7 +87,19 @@ class IapNotifier extends Notifier<IapState> {
       onError: (_) => state = state.copyWith(isLoading: false),
     );
 
-    final response = await InAppPurchase.instance.queryProductDetails(_kProductIds);
+    late ProductDetailsResponse response;
+    try {
+      response = await InAppPurchase.instance.queryProductDetails(_kProductIds);
+    } catch (_) {
+      state = IapState(
+        isPremium: activePlanId != null,
+        activePlanId: activePlanId,
+        isStoreAvailable: false,
+        isLoading: false,
+      );
+      return;
+    }
+
     state = IapState(
       isPremium: activePlanId != null,
       activePlanId: activePlanId,
