@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const kBasicPlanId = 'com.folkify.app.basic_monthly';
-const kProPlanId = 'com.folkify.app.pro_monthly';
+const kBasicPlanId = 'com.folkify.app.sub.basic_monthly';
+const kProPlanId = 'com.folkify.app.sub.pro_monthly';
 const _kProductIds = {kBasicPlanId, kProPlanId};
 const _keyActivePlan = 'folkify_active_plan';
 
