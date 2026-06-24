@@ -57,42 +57,56 @@ class _AuthInterceptor extends Interceptor {
     _isRefreshing = true;
     try {
       final refreshToken = await TokenStorage.getRefreshToken();
-      if (refreshToken != null) {
-        final tokens = await AuthService.refreshAccessToken(refreshToken);
-        await TokenStorage.saveTokens(
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-        );
-        final newToken = tokens.accessToken;
-
-        // Retry original request
-        err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
-        final response = await dio.fetch(err.requestOptions);
-        handler.resolve(response);
-
-        // Retry all queued requests
-        for (final pending in _queue) {
-          pending.opts.headers['Authorization'] = 'Bearer $newToken';
-          try {
-            final r = await dio.fetch(pending.opts);
-            pending.handler.resolve(r);
-          } catch (e) {
-            pending.handler.next(e is DioException ? e : DioException(requestOptions: pending.opts));
-          }
-        }
+      if (refreshToken == null) {
+        handler.next(err);
         return;
       }
+
+      // Refresh — nếu fail thì throw, catch bên dưới xử lý
+      final tokens = await AuthService.refreshAccessToken(refreshToken);
+      await TokenStorage.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+      final newToken = tokens.accessToken;
+
+      // Retry các request đang chờ
+      final pending = List.of(_queue);
+      _queue.clear();
+      for (final p in pending) {
+        p.opts.headers['Authorization'] = 'Bearer $newToken';
+        try {
+          final r = await dio.fetch(p.opts);
+          p.handler.resolve(r);
+        } catch (e) {
+          p.handler.next(
+              e is DioException ? e : DioException(requestOptions: p.opts));
+        }
+      }
+
+      // Retry request gốc
+      err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+      try {
+        final response = await dio.fetch(err.requestOptions);
+        handler.resolve(response);
+      } catch (e) {
+        handler.next(e is DioException
+            ? e
+            : DioException(requestOptions: err.requestOptions));
+      }
     } catch (_) {
-      for (final pending in _queue) {
-        pending.handler.next(DioException(requestOptions: pending.opts));
+      // Chỉ vào đây khi refresh thất bại thực sự
+      final pending = List.of(_queue);
+      _queue.clear();
+      for (final p in pending) {
+        p.handler.next(DioException(requestOptions: p.opts));
       }
       await TokenStorage.clearTokens();
       ApiClient.onSessionExpired?.call();
+      handler.next(err);
     } finally {
       _queue.clear();
       _isRefreshing = false;
     }
-
-    handler.next(err);
   }
 }
