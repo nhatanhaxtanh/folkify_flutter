@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const kBasicPlanId = 'com.folkify.app.sub.basic_monthly';
-const kProPlanId = 'com.folkify.app.sub.pro_monthly';
+const kBasicPlanId = 'com.folkify.app.basic.monthly';
+const kProPlanId = 'com.folkify.app.pro.monthly';
 const _kProductIds = {kBasicPlanId, kProPlanId};
 const _keyActivePlan = 'folkify_active_plan';
 
@@ -149,15 +149,29 @@ class IapNotifier extends Notifier<IapState> {
   Future<void> purchase(ProductDetails product) async {
     if (!state.isStoreAvailable || state.isLoading) return;
     state = state.copyWith(isLoading: true, clearError: true);
-    await InAppPurchase.instance.buyNonConsumable(
-      purchaseParam: PurchaseParam(productDetails: product),
-    );
+    try {
+      await InAppPurchase.instance.buyNonConsumable(
+        purchaseParam: PurchaseParam(productDetails: product),
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        purchaseError: 'Không thể khởi tạo giao dịch. Vui lòng thử lại.',
+      );
+    }
   }
 
   Future<void> restore() async {
     if (!state.isStoreAvailable || state.isLoading) return;
     state = state.copyWith(isLoading: true, clearError: true);
-    await InAppPurchase.instance.restorePurchases();
+    try {
+      await InAppPurchase.instance.restorePurchases();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        purchaseError: 'Không thể khôi phục giao dịch. Vui lòng thử lại.',
+      );
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/iap_provider.dart';
@@ -133,13 +134,60 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  TextButton(
-                    onPressed: () => context.pop(),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
-                      'Tiếp tục dùng miễn phí',
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+                      'Subscription tự động gia hạn trừ khi hủy trước 24 giờ khi hết kỳ. Quản lý trong App Store Settings.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: () => launchUrl(
+                          Uri.parse('https://folkify.vn/privacy'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        child: Text(
+                          'Chính sách bảo mật',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '  •  ',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => launchUrl(
+                          Uri.parse('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        child: Text(
+                          'Điều khoản sử dụng',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 32),
                 ],
