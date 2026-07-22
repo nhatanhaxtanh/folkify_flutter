@@ -62,13 +62,12 @@ class IapNotifier extends Notifier<IapState> {
     bool available = false;
     try {
       available = await InAppPurchase.instance.isAvailable();
-    } catch (e) {
+    } catch (_) {
       state = IapState(
         isPremium: activePlanId != null,
         activePlanId: activePlanId,
         isStoreAvailable: false,
         isLoading: false,
-        purchaseError: 'isAvailable error: $e',
       );
       return;
     }
@@ -88,25 +87,57 @@ class IapNotifier extends Notifier<IapState> {
       onError: (_) => state = state.copyWith(isLoading: false),
     );
 
-    late ProductDetailsResponse response;
-    try {
-      response = await InAppPurchase.instance.queryProductDetails(_kProductIds);
-    } catch (_) {
-      state = IapState(
-        isPremium: activePlanId != null,
-        activePlanId: activePlanId,
-        isStoreAvailable: false,
-        isLoading: false,
-      );
-      return;
+    // Thử tối đa 3 lần với delay 2 giây giữa các lần
+    List<ProductDetails> loaded = [];
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final response = await InAppPurchase.instance.queryProductDetails(_kProductIds);
+        if (response.productDetails.isNotEmpty) {
+          loaded = response.productDetails;
+          break;
+        }
+      } catch (_) {
+        // bỏ qua, thử lại
+      }
+      if (attempt < 2) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
     }
 
     state = IapState(
       isPremium: activePlanId != null,
       activePlanId: activePlanId,
-      products: response.productDetails,
+      products: loaded,
       isStoreAvailable: true,
       isLoading: false,
+    );
+  }
+
+  Future<void> retryLoadProducts() async {
+    if (state.isLoading) return;
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    List<ProductDetails> loaded = [];
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final response = await InAppPurchase.instance.queryProductDetails(_kProductIds);
+        if (response.productDetails.isNotEmpty) {
+          loaded = response.productDetails;
+          break;
+        }
+      } catch (_) {
+        // bỏ qua, thử lại
+      }
+      if (attempt < 2) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
+    state = state.copyWith(
+      products: loaded,
+      isLoading: false,
+      purchaseError: loaded.isEmpty ? 'Không tải được sản phẩm. Vui lòng thử lại.' : null,
+      clearError: loaded.isNotEmpty,
     );
   }
 
@@ -153,7 +184,7 @@ class IapNotifier extends Notifier<IapState> {
       await InAppPurchase.instance.buyNonConsumable(
         purchaseParam: PurchaseParam(productDetails: product),
       );
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         isLoading: false,
         purchaseError: 'Không thể khởi tạo giao dịch. Vui lòng thử lại.',
@@ -166,7 +197,7 @@ class IapNotifier extends Notifier<IapState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await InAppPurchase.instance.restorePurchases();
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         isLoading: false,
         purchaseError: 'Không thể khôi phục giao dịch. Vui lòng thử lại.',

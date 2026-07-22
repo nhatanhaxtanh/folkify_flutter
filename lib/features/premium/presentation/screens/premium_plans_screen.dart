@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,18 +42,36 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
       return;
     }
 
-    final product = _findProduct(iap.products, _selectedPlanId);
+    // Nếu products chưa load, thử lại trước khi mua
+    if (iap.products.isEmpty) {
+      await ref.read(iapProvider.notifier).retryLoadProducts();
+    }
+
+    final refreshed = ref.read(iapProvider);
+    final product = _findProduct(refreshed.products, _selectedPlanId);
     if (product == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Không tải được thông tin sản phẩm. Vui lòng thử lại sau.'),
           backgroundColor: AppColors.error,
+          duration: Duration(seconds: 5),
         ),
       );
       return;
     }
 
     await ref.read(iapProvider.notifier).purchase(product);
+  }
+
+  Future<void> _retryLoadProducts() async {
+    await ref.read(iapProvider.notifier).retryLoadProducts();
+  }
+
+  // Thanh toán qua Pay2S (chuyển khoản/QR) — dùng cho Android.
+  void _payWithPay2s() {
+    final plan = _selectedPlanId == kProPlanId ? 'PRO' : 'BASIC';
+    context.push('/premium/pay2s?plan=$plan');
   }
 
   Future<void> _restore() async {
@@ -87,14 +106,21 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
 
     final basicProduct = _findProduct(iap.products, kBasicPlanId);
     final proProduct = _findProduct(iap.products, kProPlanId);
+    final productsLoaded = iap.products.isNotEmpty;
+    final productsUnavailable = !iap.isLoading && !productsLoaded && iap.isStoreAvailable;
 
     String buttonText;
     if (iap.isPremium) {
       buttonText = 'Đang hoạt động';
     } else if (_selectedPlanId == kProPlanId) {
-      buttonText = 'Bắt đầu với Pro — ${proProduct?.price ?? '99.000đ'}/tháng';
+      // Chỉ hiển thị giá thật từ App Store, không fallback hardcode
+      buttonText = productsLoaded
+          ? 'Bắt đầu với Pro — ${proProduct?.price}/tháng'
+          : 'Đang tải...';
     } else {
-      buttonText = 'Bắt đầu với Basic — ${basicProduct?.price ?? '49.000đ'}/tháng';
+      buttonText = productsLoaded
+          ? 'Bắt đầu với Basic — ${basicProduct?.price}/tháng'
+          : 'Đang tải...';
     }
 
     return Scaffold(
@@ -123,7 +149,11 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                   GradientButton(
                     text: buttonText,
                     isLoading: iap.isLoading,
-                    onPressed: iap.isPremium ? null : _purchase,
+                    onPressed: (iap.isPremium || (!productsLoaded && !productsUnavailable))
+                        ? null
+                        : productsUnavailable
+                            ? _retryLoadProducts
+                            : _purchase,
                     icon: FontAwesomeIcons.crown,
                   ),
                   const SizedBox(height: 12),
@@ -134,6 +164,33 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
                     ),
                   ),
+                  if (Platform.isAndroid && !iap.isPremium) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('HOẶC', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _payWithPay2s,
+                      icon: FaIcon(FontAwesomeIcons.buildingColumns, size: 18, color: AppColors.primary),
+                      label: Text(
+                        'Thanh toán qua chuyển khoản / QR',
+                        style: AppTextStyles.titleMedium.copyWith(color: AppColors.primary),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -245,8 +302,8 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
         _PlanCard(
           planId: kBasicPlanId,
           title: 'Basic',
-          price: basicProduct?.price ?? '49.000đ',
-          period: '/tháng',
+          price: basicProduct?.price ?? '',
+          period: basicProduct != null ? '/tháng' : '',
           features: const ['Tất cả bài học cơ bản', '50+ bản nhạc', 'Luyện tập không giới hạn'],
           color: AppColors.planBasic,
           isSelected: _selectedPlanId == kBasicPlanId,
@@ -257,8 +314,8 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
         _PlanCard(
           planId: kProPlanId,
           title: 'Pro',
-          price: proProduct?.price ?? '99.000đ',
-          period: '/tháng',
+          price: proProduct?.price ?? '',
+          period: proProduct != null ? '/tháng' : '',
           features: const [
             'Tất cả bài học & bản nhạc',
             'Máy lên dây thông minh',
