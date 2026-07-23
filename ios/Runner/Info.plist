@@ -4,6 +4,8 @@
 <dict>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Cho phép Folkify lưu mã QR thanh toán vào thư viện ảnh của bạn.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Folkify cần truy cập thư viện ảnh để lưu và chọn ảnh mã QR thanh toán.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>mbbank</string>
