@@ -28,6 +28,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadBiometricState();
+    // Đồng bộ gói mới nhất từ backend (hạn còn lại / đã hết hạn).
+    ref.read(authStateProvider.notifier).refreshPlan();
   }
 
   Future<void> _loadBiometricState() async {
@@ -302,6 +304,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildSubscriptionCard(BuildContext context) {
+    final auth = ref.watch(authStateProvider);
+    final planLabel = switch (auth.effectivePlan) {
+      'PRO' => 'Pro',
+      'BASIC' => 'Basic',
+      _ => 'Free',
+    };
+    final days = auth.daysRemaining;
+    final subtitle = days != null
+        ? 'Gói hiện tại: $planLabel · còn $days ngày'
+        : 'Gói hiện tại: $planLabel';
     return GestureDetector(
       onTap: () => context.push('/premium'),
       child: Container(
@@ -330,7 +342,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 children: [
                   Text('Subscription', style: AppTextStyles.titleMedium),
                   const SizedBox(height: 2),
-                  Text('Gói hiện tại: Free', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
+                  Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
                 ],
               ),
             ),

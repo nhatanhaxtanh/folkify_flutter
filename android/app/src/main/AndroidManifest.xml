@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <!-- Lưu mã QR vào thư viện ảnh (gal) — Android 12 trở xuống -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <application
         android:label="folkify_flutter"
         android:name="${applicationName}"
@@ -49,5 +51,21 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Mở app ngân hàng để quét QR đã lưu (scheme từ registry VietQR) -->
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="mbbank"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="vietcombankmobile"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="vietinbankipay"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="bidv.smartbanking.partner"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="agribankmobile"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="tcb"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="acbone"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="vpbankneo"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="hydro"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="myvib2"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="shbmobile"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="hdbankmobile"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="newomni-app"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="scbmobilebanking"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="eximbankmobile"/></intent>
     </queries>
 </manifest>

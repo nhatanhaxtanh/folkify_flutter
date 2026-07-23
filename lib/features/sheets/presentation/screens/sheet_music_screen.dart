@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/providers/auth_provider.dart';
 
 class SheetMusicScreen extends StatefulWidget {
   const SheetMusicScreen({super.key});
@@ -307,7 +309,7 @@ class _Sheet {
   });
 }
 
-class _SheetCard extends StatelessWidget {
+class _SheetCard extends ConsumerWidget {
   final _Sheet sheet;
   const _SheetCard({required this.sheet});
 
@@ -318,7 +320,9 @@ class _SheetCard extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Sheet premium chỉ mở khóa khi user là thành viên premium (BASIC hoặc PRO).
+    final locked = sheet.isPremium && !ref.watch(authStateProvider).isPremium;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -391,19 +395,19 @@ class _SheetCard extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        if (sheet.isPremium) {
+                        if (locked) {
                           context.push('/premium');
                         } else {
                           _showDownloadSheet(context, sheet);
                         }
                       },
                       icon: FaIcon(
-                        sheet.isPremium ? FontAwesomeIcons.lock : FontAwesomeIcons.download,
+                        locked ? FontAwesomeIcons.lock : FontAwesomeIcons.download,
                         size: 11, color: Colors.white,
                       ),
-                      label: Text(sheet.isPremium ? 'Mở khóa' : 'Tải về'),
+                      label: Text(locked ? 'Mở khóa' : 'Tải về'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: sheet.isPremium ? const Color(0xFFF59E0B) : AppColors.primaryDark,
+                        backgroundColor: locked ? const Color(0xFFF59E0B) : AppColors.primaryDark,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         textStyle: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600, fontSize: 11),

@@ -6,6 +6,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/token_storage.dart';
+import '../services/user_service.dart';
 
 class AuthState {
   final bool isLoggedIn;
@@ -14,6 +15,8 @@ class AuthState {
   final String? userEmail;
   final String? userId;
   final String? role;
+  final String? plan; // "FREE" | "BASIC" | "PRO"
+  final DateTime? planExpiresAt; // null = không giới hạn (gói cũ / FREE)
 
   const AuthState({
     required this.isLoggedIn,
@@ -22,7 +25,30 @@ class AuthState {
     this.userEmail,
     this.userId,
     this.role,
+    this.plan,
+    this.planExpiresAt,
   });
+
+  /// Gói còn hiệu lực (chưa hết hạn). NULL expiry = không giới hạn.
+  bool get _planActive =>
+      planExpiresAt == null || planExpiresAt!.isAfter(DateTime.now());
+
+  /// Thành viên premium (đã mua BASIC hoặc PRO còn hạn) — mở khóa tải bản nhạc premium.
+  bool get isPremium => (plan == 'BASIC' || plan == 'PRO') && _planActive;
+
+  /// Gói PRO còn hạn — mở khóa thêm luyện tập AI Pitch.
+  bool get isPro => plan == 'PRO' && _planActive;
+
+  /// Gói thực tế sau khi tính hết hạn ("FREE" nếu đã hết hạn).
+  String get effectivePlan => isPro ? 'PRO' : (isPremium ? 'BASIC' : 'FREE');
+
+  /// Số ngày còn lại của gói (null nếu không giới hạn hoặc đã hết hạn).
+  int? get daysRemaining {
+    final exp = planExpiresAt;
+    if (exp == null || !isPremium) return null;
+    final diff = exp.difference(DateTime.now());
+    return diff.isNegative ? 0 : diff.inDays + 1;
+  }
 
   AuthState copyWith({
     bool? isLoggedIn,
@@ -31,6 +57,8 @@ class AuthState {
     String? userEmail,
     String? userId,
     String? role,
+    String? plan,
+    DateTime? planExpiresAt,
   }) {
     return AuthState(
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
@@ -39,6 +67,8 @@ class AuthState {
       userEmail: userEmail ?? this.userEmail,
       userId: userId ?? this.userId,
       role: role ?? this.role,
+      plan: plan ?? this.plan,
+      planExpiresAt: planExpiresAt ?? this.planExpiresAt,
     );
   }
 }
@@ -48,28 +78,16 @@ class AuthNotifier extends Notifier<AuthState> {
   static const _keyUserEmail = 'folkify_user_email';
   static const _keyUserId = 'folkify_user_id';
   static const _keyUserRole = 'folkify_user_role';
+  static const _keyUserPlan = 'folkify_user_plan';
+  static const _keyUserPlanExpires = 'folkify_user_plan_expires';
   static const _keyBiometricEnabled = 'folkify_biometric_enabled';
 
   @override
   AuthState build() {
     ApiClient.onSessionExpired = clearSession;
-    _loadFromStorage();
+    // Luôn bắt đăng nhập lại: KHÔNG khôi phục phiên đã lưu khi mở app.
+    // Sau splash, mọi người dùng đều được điều hướng về trang login.
     return const AuthState(isLoggedIn: false);
-  }
-
-  Future<void> _loadFromStorage() async {
-    final accessToken = await TokenStorage.getAccessToken();
-    if (accessToken == null) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final biometricEnabled = prefs.getBool(_keyBiometricEnabled) ?? false;
-
-    if (biometricEnabled && await BiometricService.isAvailable()) {
-      state = const AuthState(isLoggedIn: false, requiresBiometric: true);
-      return;
-    }
-
-    state = _buildLoggedInState(prefs);
   }
 
   AuthState _buildLoggedInState(SharedPreferences prefs) => AuthState(
@@ -78,6 +96,8 @@ class AuthNotifier extends Notifier<AuthState> {
         userEmail: prefs.getString(_keyUserEmail),
         userId: prefs.getString(_keyUserId),
         role: prefs.getString(_keyUserRole),
+        plan: prefs.getString(_keyUserPlan) ?? 'FREE',
+        planExpiresAt: parsePlanExpiry(prefs.getString(_keyUserPlanExpires)),
       );
 
   Future<bool> authenticateWithBiometric() async {
@@ -94,6 +114,8 @@ class AuthNotifier extends Notifier<AuthState> {
           userName: tokens.user.name,
           userId: tokens.user.id,
           role: tokens.user.role,
+          plan: tokens.user.plan,
+          planExpiresAt: tokens.user.planExpiresAt,
         );
         return true;
       }
@@ -136,7 +158,51 @@ class AuthNotifier extends Notifier<AuthState> {
       prefs.setString(_keyUserEmail, tokens.user.email),
       prefs.setString(_keyUserId, tokens.user.id),
       prefs.setString(_keyUserRole, tokens.user.role),
+      prefs.setString(_keyUserPlan, tokens.user.plan),
+      prefs.setString(_keyUserPlanExpires, tokens.user.planExpiresAt?.toIso8601String() ?? ''),
     ]);
+  }
+
+  /// Đồng bộ lại gói từ backend (gọi sau khi thanh toán thành công / khi mở Profile).
+  Future<void> refreshPlan() async {
+    try {
+      final profile = await UserService.getProfile();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyUserPlan, profile.plan);
+      await prefs.setString(
+          _keyUserPlanExpires, profile.planExpiresAt?.toIso8601String() ?? '');
+      state = state.copyWith(plan: profile.plan, planExpiresAt: profile.planExpiresAt);
+    } catch (_) {
+      // Lỗi mạng — giữ nguyên gói hiện tại.
+    }
+  }
+
+  /// Hủy gói hiện tại — gọi backend rồi đưa state về FREE ngay (xóa hạn).
+  Future<void> cancelPlan() async {
+    await UserService.cancelPlan();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserPlan, 'FREE');
+    await prefs.remove(_keyUserPlanExpires);
+    state = AuthState(
+      isLoggedIn: state.isLoggedIn,
+      requiresBiometric: state.requiresBiometric,
+      userName: state.userName,
+      userEmail: state.userEmail,
+      userId: state.userId,
+      role: state.role,
+      plan: 'FREE',
+      planExpiresAt: null,
+    );
+  }
+
+  /// Cập nhật gói ngay tại máy (dùng để phản hồi tức thì sau khi mua xong).
+  /// Đặt hạn tạm bằng thời hạn mặc định; sau đó [refreshPlan] sẽ lấy hạn chính xác từ backend.
+  Future<void> setPlanLocally(String plan) async {
+    final expiry = DateTime.now().add(const Duration(days: 30));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserPlan, plan);
+    await prefs.setString(_keyUserPlanExpires, expiry.toIso8601String());
+    state = state.copyWith(plan: plan, planExpiresAt: expiry);
   }
 
   Future<void> login(String email, String password) async {
@@ -148,6 +214,8 @@ class AuthNotifier extends Notifier<AuthState> {
       userName: tokens.user.name,
       userId: tokens.user.id,
       role: tokens.user.role,
+      plan: tokens.user.plan,
+      planExpiresAt: tokens.user.planExpiresAt,
     );
   }
 
@@ -160,6 +228,8 @@ class AuthNotifier extends Notifier<AuthState> {
       userName: tokens.user.name,
       userId: tokens.user.id,
       role: tokens.user.role,
+      plan: tokens.user.plan,
+      planExpiresAt: tokens.user.planExpiresAt,
     );
   }
 
@@ -183,6 +253,8 @@ class AuthNotifier extends Notifier<AuthState> {
       userName: tokens.user.name,
       userId: tokens.user.id,
       role: tokens.user.role,
+      plan: tokens.user.plan,
+      planExpiresAt: tokens.user.planExpiresAt,
     );
     return true;
   }
@@ -215,6 +287,8 @@ class AuthNotifier extends Notifier<AuthState> {
       userName: tokens.user.name,
       userId: tokens.user.id,
       role: tokens.user.role,
+      plan: tokens.user.plan,
+      planExpiresAt: tokens.user.planExpiresAt,
     );
     return true;
   }
@@ -239,6 +313,8 @@ class AuthNotifier extends Notifier<AuthState> {
       prefs.remove(_keyUserEmail),
       prefs.remove(_keyUserId),
       prefs.remove(_keyUserRole),
+      prefs.remove(_keyUserPlan),
+      prefs.remove(_keyUserPlanExpires),
     ]);
     state = const AuthState(isLoggedIn: false);
   }
@@ -257,6 +333,8 @@ class AuthNotifier extends Notifier<AuthState> {
       prefs.remove(_keyUserEmail),
       prefs.remove(_keyUserId),
       prefs.remove(_keyUserRole),
+      prefs.remove(_keyUserPlan),
+      prefs.remove(_keyUserPlanExpires),
     ]);
     state = const AuthState(isLoggedIn: false);
   }
@@ -275,6 +353,8 @@ class AuthNotifier extends Notifier<AuthState> {
         userName: tokens.user.name,
         userId: tokens.user.id,
         role: tokens.user.role,
+        plan: tokens.user.plan,
+        planExpiresAt: tokens.user.planExpiresAt,
       );
       return true;
     } catch (_) {

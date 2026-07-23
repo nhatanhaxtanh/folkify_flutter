@@ -1,14 +1,20 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../core/providers/iap_provider.dart';
+import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/widgets/gradient_button.dart';
+
+// ⚠️ Thanh toán qua Apple IAP đã được TẮT — chỉ dùng Pay2S (chuyển khoản/QR).
+// Toàn bộ code IAP cũ còn ở lib/core/providers/iap_provider.dart (không bị xóa),
+// và bản màn hình dùng IAP còn trong lịch sử git nếu cần bật lại.
+
+// Giá phải khớp với backend (PAY2S_PRICE_BASIC / PAY2S_PRICE_PRO).
+const _kBasicPrice = '49.000đ';
+const _kProPrice = '99.000đ';
 
 class PremiumPlansScreen extends ConsumerStatefulWidget {
   const PremiumPlansScreen({super.key});
@@ -18,110 +24,66 @@ class PremiumPlansScreen extends ConsumerStatefulWidget {
 }
 
 class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
-  String _selectedPlanId = kProPlanId;
+  String _selectedPlan = 'PRO'; // 'BASIC' | 'PRO'
 
-  ProductDetails? _findProduct(List<ProductDetails> products, String id) {
-    try {
-      return products.firstWhere((p) => p.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _purchase() async {
-    final iap = ref.read(iapProvider);
-
-    if (!iap.isStoreAvailable) {
-      final detail = iap.purchaseError != null ? '\n${iap.purchaseError}' : '';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('App Store không khả dụng$detail'),
-          duration: const Duration(seconds: 8),
-        ),
-      );
-      return;
-    }
-
-    // Nếu products chưa load, thử lại trước khi mua
-    if (iap.products.isEmpty) {
-      await ref.read(iapProvider.notifier).retryLoadProducts();
-    }
-
-    final refreshed = ref.read(iapProvider);
-    final product = _findProduct(refreshed.products, _selectedPlanId);
-    if (product == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không tải được thông tin sản phẩm. Vui lòng thử lại sau.'),
-          backgroundColor: AppColors.error,
-          duration: Duration(seconds: 5),
-        ),
-      );
-      return;
-    }
-
-    await ref.read(iapProvider.notifier).purchase(product);
-  }
-
-  Future<void> _retryLoadProducts() async {
-    await ref.read(iapProvider.notifier).retryLoadProducts();
-  }
-
-  // Thanh toán qua Pay2S (chuyển khoản/QR) — dùng cho Android.
+  // Thanh toán qua PayOS (chuyển khoản / QR).
   void _payWithPay2s() {
-    final plan = _selectedPlanId == kProPlanId ? 'PRO' : 'BASIC';
-    context.push('/premium/pay2s?plan=$plan');
+    context.push('/premium/pay2s?plan=$_selectedPlan');
   }
 
-  Future<void> _restore() async {
-    await ref.read(iapProvider.notifier).restore();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đang khôi phục giao dịch...')),
-      );
+  /// Xác nhận rồi hủy gói hiện tại — tài khoản về Free ngay.
+  Future<void> _confirmCancelPlan() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        title: Text('Hủy gói?', style: AppTextStyles.headlineMedium),
+        content: Text(
+          'Tài khoản sẽ trở về Free ngay lập tức và bạn mất quyền dùng các tính năng premium. '
+          'Số ngày còn lại sẽ không được hoàn tiền.',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Giữ gói', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Hủy gói', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(authStateProvider.notifier).cancelPlan();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã hủy gói. Tài khoản của bạn trở về Free.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final iap = ref.watch(iapProvider);
-
-    // Hiển thị thông báo lỗi khi có
-    ref.listen(iapProvider, (prev, next) {
-      if (next.purchaseError != null && prev?.purchaseError != next.purchaseError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.purchaseError!), backgroundColor: AppColors.error),
-        );
-      }
-      if (next.isPremium && !(prev?.isPremium ?? false)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng ký thành công! Chào mừng bạn đến với Premium'),
-            backgroundColor: Color(0xFF16A34A),
-          ),
-        );
-      }
-    });
-
-    final basicProduct = _findProduct(iap.products, kBasicPlanId);
-    final proProduct = _findProduct(iap.products, kProPlanId);
-    final productsLoaded = iap.products.isNotEmpty;
-    final productsUnavailable = !iap.isLoading && !productsLoaded && iap.isStoreAvailable;
-
-    String buttonText;
-    if (iap.isPremium) {
-      buttonText = 'Đang hoạt động';
-    } else if (_selectedPlanId == kProPlanId) {
-      // Chỉ hiển thị giá thật từ App Store, không fallback hardcode
-      buttonText = productsLoaded
-          ? 'Bắt đầu với Pro — ${proProduct?.price}/tháng'
-          : 'Đang tải...';
-    } else {
-      buttonText = productsLoaded
-          ? 'Bắt đầu với Basic — ${basicProduct?.price}/tháng'
-          : 'Đang tải...';
-    }
+    final isPro = _selectedPlan == 'PRO';
+    final auth = ref.watch(authStateProvider);
+    final currentPlan = auth.effectivePlan;
+    final daysRemaining = auth.daysRemaining;
+    final alreadyOnSelected = _selectedPlan == currentPlan;
+    final price = isPro ? _kProPrice : _kBasicPrice;
+    final buttonText = alreadyOnSelected
+        ? 'Gia hạn gói ${isPro ? 'Pro' : 'Basic'} — $price'
+        : 'Thanh toán gói ${isPro ? 'Pro' : 'Basic'} — $price';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -133,200 +95,166 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
         ),
         title: Text('Nâng cấp tài khoản', style: AppTextStyles.headlineMedium),
       ),
-      body: iap.isLoading && iap.products.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-                  _buildHeader(iap),
-                  const SizedBox(height: 32),
-                  _buildPlans(iap, basicProduct, proProduct),
-                  const SizedBox(height: 28),
-                  _buildFeatureList(),
-                  const SizedBox(height: 32),
-                  GradientButton(
-                    text: buttonText,
-                    isLoading: iap.isLoading,
-                    onPressed: (iap.isPremium || (!productsLoaded && !productsUnavailable))
-                        ? null
-                        : productsUnavailable
-                            ? _retryLoadProducts
-                            : _purchase,
-                    icon: FontAwesomeIcons.crown,
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: iap.isLoading ? null : _restore,
-                    child: Text(
-                      'Khôi phục giao dịch',
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
-                    ),
-                  ),
-                  if (Platform.isAndroid && !iap.isPremium) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('HOẶC', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
-                        ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _payWithPay2s,
-                      icon: FaIcon(FontAwesomeIcons.buildingColumns, size: 18, color: AppColors.primary),
-                      label: Text(
-                        'Thanh toán qua chuyển khoản / QR',
-                        style: AppTextStyles.titleMedium.copyWith(color: AppColors.primary),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      'Subscription tự động gia hạn trừ khi hủy trước 24 giờ khi hết kỳ. Quản lý trong App Store Settings.',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      GestureDetector(
-                        onTap: () => launchUrl(
-                          Uri.parse('https://folkify.vn/privacy'),
-                          mode: LaunchMode.externalApplication,
-                        ),
-                        child: Text(
-                          'Chính sách bảo mật',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                            fontSize: 11,
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '  •  ',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => launchUrl(
-                          Uri.parse('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'),
-                          mode: LaunchMode.externalApplication,
-                        ),
-                        child: Text(
-                          'Điều khoản sử dụng',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                            fontSize: 11,
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            _buildHeader(),
+            if (currentPlan != 'FREE') ...[
+              const SizedBox(height: 16),
+              _buildCurrentPlanBanner(currentPlan, daysRemaining),
+              Align(
+                alignment: Alignment.center,
+                child: TextButton.icon(
+                  onPressed: _confirmCancelPlan,
+                  icon: FaIcon(FontAwesomeIcons.ban, size: 12, color: AppColors.textMuted),
+                  label: Text('Hủy gói ngay',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
+                ),
               ),
+            ],
+            const SizedBox(height: 32),
+            _buildPlans(currentPlan),
+            const SizedBox(height: 28),
+            _buildFeatureList(),
+            const SizedBox(height: 32),
+            GradientButton(
+              text: buttonText,
+              onPressed: _payWithPay2s,
+              icon: FontAwesomeIcons.crown,
             ),
-    );
-  }
-
-  Widget _buildHeader(IapState iap) {
-    return Column(
-      children: [
-        FaIcon(FontAwesomeIcons.crown, color: const Color(0xFFF59E0B), size: 56),
-        const SizedBox(height: 16),
-        if (iap.isPremium) ...[
-          Text('Bạn đang là thành viên Premium', style: AppTextStyles.displayMedium, textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF16A34A).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.4)),
+            const SizedBox(height: 12),
+            Text(
+              'Thanh toán một lần qua chuyển khoản ngân hàng / quét mã QR (Pay2S). '
+              'Gói được kích hoạt ngay sau khi hệ thống ghi nhận thanh toán.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
+              textAlign: TextAlign.center,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
-                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => launchUrl(
+                    Uri.parse('https://folkify.vn/privacy'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: Text(
+                    'Chính sách bảo mật',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppColors.primary,
+                    ),
+                  ),
+                ),
                 Text(
-                  iap.activePlanId == kProPlanId ? 'Gói Pro đang hoạt động' : 'Gói Basic đang hoạt động',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: const Color(0xFF16A34A),
-                    fontWeight: FontWeight.w600,
+                  '  •  ',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => launchUrl(
+                    Uri.parse('https://folkify.vn/terms'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: Text(
+                    'Điều khoản sử dụng',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppColors.primary,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-        ] else ...[
-          Text('Mở khóa toàn bộ\nnội dung Folkify', style: AppTextStyles.displayMedium, textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Text(
-            'Học không giới hạn với hàng trăm bài học và bản nhạc',
-            style: AppTextStyles.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        FaIcon(FontAwesomeIcons.crown, color: const Color(0xFFF59E0B), size: 56),
+        const SizedBox(height: 16),
+        Text('Mở khóa toàn bộ\nnội dung Folkify',
+            style: AppTextStyles.displayMedium, textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        Text(
+          'Học không giới hạn với hàng trăm bài học và bản nhạc',
+          style: AppTextStyles.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
 
-  Widget _buildPlans(IapState iap, ProductDetails? basicProduct, ProductDetails? proProduct) {
+  Widget _buildCurrentPlanBanner(String currentPlan, int? daysRemaining) {
+    final label = currentPlan == 'PRO' ? 'Pro' : 'Basic';
+    final color = currentPlan == 'PRO' ? AppColors.planPro : AppColors.planBasic;
+    final suffix = daysRemaining != null ? ' · còn $daysRemaining ngày' : '';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Row(
+        children: [
+          FaIcon(FontAwesomeIcons.solidCircleCheck, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Bạn đang là thành viên gói $label$suffix',
+              style: AppTextStyles.titleMedium.copyWith(color: color, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlans(String currentPlan) {
     return Column(
       children: [
         _PlanCard(
-          planId: kBasicPlanId,
           title: 'Basic',
-          price: basicProduct?.price ?? '',
-          period: basicProduct != null ? '/tháng' : '',
+          price: _kBasicPrice,
           features: const ['Tất cả bài học cơ bản', '50+ bản nhạc', 'Luyện tập không giới hạn'],
           color: AppColors.planBasic,
-          isSelected: _selectedPlanId == kBasicPlanId,
-          isActive: iap.activePlanId == kBasicPlanId,
-          onTap: () => setState(() => _selectedPlanId = kBasicPlanId),
+          isSelected: _selectedPlan == 'BASIC',
+          isCurrent: currentPlan == 'BASIC',
+          onTap: () => setState(() => _selectedPlan = 'BASIC'),
         ),
         const SizedBox(height: 14),
         _PlanCard(
-          planId: kProPlanId,
           title: 'Pro',
-          price: proProduct?.price ?? '',
-          period: proProduct != null ? '/tháng' : '',
+          price: _kProPrice,
           features: const [
             'Tất cả bài học & bản nhạc',
+            'Luyện tập AI Pitch',
             'Máy lên dây thông minh',
-            'Theo dõi tiến trình chi tiết',
             'Tải bản nhạc offline',
             'Hỗ trợ ưu tiên 24/7',
           ],
           color: AppColors.planPro,
-          isSelected: _selectedPlanId == kProPlanId,
-          isActive: iap.activePlanId == kProPlanId,
-          onTap: () => setState(() => _selectedPlanId = kProPlanId),
+          isSelected: _selectedPlan == 'PRO',
+          isCurrent: currentPlan == 'PRO',
+          onTap: () => setState(() => _selectedPlan = 'PRO'),
           isBest: true,
         ),
       ],
@@ -374,28 +302,24 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
 }
 
 class _PlanCard extends StatelessWidget {
-  final String planId;
   final String title;
   final String price;
-  final String period;
   final List<String> features;
   final Color color;
   final bool isSelected;
-  final bool isActive;
   final bool isBest;
+  final bool isCurrent;
   final VoidCallback onTap;
 
   const _PlanCard({
-    required this.planId,
     required this.title,
     required this.price,
-    required this.period,
     required this.features,
     required this.color,
     required this.isSelected,
-    required this.isActive,
     required this.onTap,
     this.isBest = false,
+    this.isCurrent = false,
   });
 
   @override
@@ -422,7 +346,25 @@ class _PlanCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(title, style: AppTextStyles.headlineMedium.copyWith(color: color)),
-                    if (isBest) ...[
+                    if (isCurrent) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'ĐANG DÙNG',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ] else if (isBest) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -441,34 +383,9 @@ class _PlanCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (isActive) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF16A34A),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'ĐANG DÙNG',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(price, style: AppTextStyles.headlineLarge.copyWith(color: color)),
-                    Text(period, style: AppTextStyles.bodySmall),
-                  ],
-                ),
+                Text(price, style: AppTextStyles.headlineLarge.copyWith(color: color)),
               ],
             ),
             const SizedBox(height: 14),

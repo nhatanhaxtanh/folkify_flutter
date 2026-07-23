@@ -71,6 +71,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/register-success', builder: (_, _) => const RegisterSuccessScreen()),
       GoRoute(path: '/biometric-lock', builder: (_, _) => const BiometricLockScreen()),
+      // Trang thanh toán Pay2S — full màn hình, KHÔNG có navbar (ngoài ShellRoute).
+      GoRoute(
+        path: '/premium/pay2s',
+        builder: (_, s) => Pay2sCheckoutScreen(
+          plan: (s.uri.queryParameters['plan'] ?? 'PRO').toUpperCase(),
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -92,12 +99,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/practice', pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey, child: const PracticeScreen())),
           GoRoute(path: '/sheets', pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey, child: const SheetMusicScreen())),
           GoRoute(path: '/premium', pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey, child: const PremiumPlansScreen())),
-          GoRoute(
-            path: '/premium/pay2s',
-            builder: (_, s) => Pay2sCheckoutScreen(
-              plan: (s.uri.queryParameters['plan'] ?? 'PRO').toUpperCase(),
-            ),
-          ),
           GoRoute(path: '/profile', pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey, child: const ProfileScreen())),
           GoRoute(path: '/change-password', builder: (_, _) => const ChangePasswordScreen()),
         ],

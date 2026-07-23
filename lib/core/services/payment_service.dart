@@ -42,9 +42,14 @@ class PaymentService {
   static final _dio = ApiClient.instance;
 
   /// Tạo link thanh toán Pay2S để nâng cấp gói ("BASIC" | "PRO").
+  /// Timeout dài hơn vì backend còn gọi tiếp sang Pay2S (lần đầu có thể chậm).
   static Future<Pay2sCheckout> createCheckout(String plan) async {
     try {
-      final res = await _dio.post('/api/payments/checkout', data: {'plan': plan});
+      final res = await _dio.post(
+        '/api/payments/checkout',
+        data: {'plan': plan},
+        options: Options(receiveTimeout: const Duration(seconds: 30)),
+      );
       return Pay2sCheckout.fromJson(res.data['result'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw AuthException(_extractMessage(e));

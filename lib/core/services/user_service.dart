@@ -7,6 +7,8 @@ class UserProfile {
   final String name;
   final String email;
   final String role;
+  final String plan; // "FREE" | "BASIC" | "PRO"
+  final DateTime? planExpiresAt; // null = không giới hạn
   final String? createdAt;
 
   const UserProfile({
@@ -14,6 +16,8 @@ class UserProfile {
     required this.name,
     required this.email,
     required this.role,
+    required this.plan,
+    this.planExpiresAt,
     this.createdAt,
   });
 
@@ -22,6 +26,8 @@ class UserProfile {
         name: json['name'] as String,
         email: json['email'] as String,
         role: json['role'] as String,
+        plan: json['plan'] as String? ?? 'FREE',
+        planExpiresAt: parsePlanExpiry(json['planExpiresAt']),
         createdAt: json['createdAt'] as String?,
       );
 }
@@ -62,6 +68,15 @@ class UserService {
   static Future<void> deleteAccount() async {
     try {
       await _dio.delete('/api/users/me');
+    } on DioException catch (e) {
+      throw AuthException(_extractMessage(e));
+    }
+  }
+
+  /// Hủy gói hiện tại — tài khoản về Free ngay (không hoàn tiền).
+  static Future<void> cancelPlan() async {
+    try {
+      await _dio.post('/api/users/me/cancel-plan');
     } on DioException catch (e) {
       throw AuthException(_extractMessage(e));
     }

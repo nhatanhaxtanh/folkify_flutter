@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/payment_service.dart';
-import 'iap_provider.dart';
+import 'auth_provider.dart';
+// IAP đã tắt — chỉ dùng Pay2S. (giữ import cũ để tham khảo)
+// import 'iap_provider.dart';
 
 enum Pay2sPhase { idle, creating, waiting, success, expired, error }
 
@@ -39,10 +41,6 @@ class Pay2sState {
   }
 }
 
-/// Map gói backend → product id để đồng bộ trạng thái premium với IAP provider.
-String _productIdForPlan(String plan) =>
-    plan == 'PRO' ? kProPlanId : kBasicPlanId;
-
 class Pay2sNotifier extends AutoDisposeNotifier<Pay2sState> {
   Timer? _pollTimer;
   DateTime? _deadline;
@@ -65,7 +63,7 @@ class Pay2sNotifier extends AutoDisposeNotifier<Pay2sState> {
         orderId: checkout.orderId,
         payUrl: checkout.payUrl,
       );
-      await openPayUrl();
+      // Không mở trình duyệt ngoài nữa — màn checkout tự nạp payUrl bằng WebView trong app.
       _startPolling();
     } catch (e) {
       state = state.copyWith(phase: Pay2sPhase.error, message: e.toString());
@@ -119,12 +117,14 @@ class Pay2sNotifier extends AutoDisposeNotifier<Pay2sState> {
     }
   }
 
-  /// Lưu trạng thái premium và làm mới IAP provider để cả app nhận gói mới.
+  /// Lưu gói vừa mua để app ghi nhận trạng thái premium.
   Future<void> _unlockPremium(String? plan) async {
     if (plan == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('folkify_active_plan', _productIdForPlan(plan));
-    ref.invalidate(iapProvider);
+    await prefs.setString('folkify_active_plan', plan); // "BASIC" | "PRO"
+    // Mở khóa tính năng ngay lập tức, rồi đồng bộ lại gói từ backend cho chắc chắn.
+    await ref.read(authStateProvider.notifier).setPlanLocally(plan);
+    await ref.read(authStateProvider.notifier).refreshPlan();
   }
 
   /// Poll thủ công ngay (khi user bấm "Tôi đã thanh toán").

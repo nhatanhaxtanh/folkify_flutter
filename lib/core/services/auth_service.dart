@@ -14,14 +14,21 @@ class UserInfo {
   final String name;
   final String email;
   final String role;
+  final String plan; // "FREE" | "BASIC" | "PRO"
+  final DateTime? planExpiresAt; // null = không giới hạn
 
   const UserInfo({
     required this.id,
     required this.name,
     required this.email,
     required this.role,
+    required this.plan,
+    this.planExpiresAt,
   });
 }
+
+DateTime? parsePlanExpiry(dynamic raw) =>
+    raw is String && raw.isNotEmpty ? DateTime.tryParse(raw) : null;
 
 class AuthTokens {
   final String accessToken;
@@ -139,6 +146,8 @@ class AuthService {
         name: userJson['name'] as String,
         email: userJson['email'] as String,
         role: userJson['role'] as String,
+        plan: userJson['plan'] as String? ?? 'FREE',
+        planExpiresAt: parsePlanExpiry(userJson['planExpiresAt']),
       ),
     );
   }

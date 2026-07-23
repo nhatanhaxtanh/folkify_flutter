@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/providers/auth_provider.dart';
 
-class PracticeScreen extends StatefulWidget {
+class PracticeScreen extends ConsumerStatefulWidget {
   const PracticeScreen({super.key});
 
   @override
-  State<PracticeScreen> createState() => _PracticeScreenState();
+  ConsumerState<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends State<PracticeScreen> {
+class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   int _selectedTab = 0;
   int _selectedRhythm = 0;
   double _bpm = 60;
@@ -206,7 +209,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   ] else if (_selectedTab == 1)
                     _buildQuizTab()
                   else
-                    _buildAiPitchTab(),
+                    // AI Pitch chỉ dành cho gói PRO.
+                    (ref.watch(authStateProvider).isPro
+                        ? _buildAiPitchTab()
+                        : _buildProLocked()),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -1008,6 +1014,60 @@ class _PracticeScreenState extends State<PracticeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Màn khóa khi user chưa có gói PRO — mời nâng cấp.
+  Widget _buildProLocked() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.planPro.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.center,
+            child: FaIcon(FontAwesomeIcons.lock, color: AppColors.planPro, size: 26),
+          ),
+          const SizedBox(height: 16),
+          Text('Tính năng của gói PRO',
+              style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(
+            'Luyện tập AI Pitch giúp bạn kiểm tra cao độ theo thời gian thực. '
+            'Nâng cấp lên gói PRO để mở khóa.',
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.push('/premium'),
+              icon: const FaIcon(FontAwesomeIcons.crown, size: 14, color: Colors.white),
+              label: const Text('Nâng cấp lên PRO'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.planPro,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

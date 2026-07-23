@@ -2,6 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Cho phép Folkify lưu mã QR thanh toán vào thư viện ảnh của bạn.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>mbbank</string>
+		<string>vietcombankmobile</string>
+		<string>vietinbankipay</string>
+		<string>bidv.smartbanking.partner</string>
+		<string>agribankmobile</string>
+		<string>tcb</string>
+		<string>acbone</string>
+		<string>vpbankneo</string>
+		<string>hydro</string>
+		<string>myvib2</string>
+		<string>shbmobile</string>
+		<string>hdbankmobile</string>
+		<string>newomni-app</string>
+		<string>scbmobilebanking</string>
+		<string>eximbankmobile</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>
