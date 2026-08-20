@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -153,8 +155,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     _buildDivider(),
                     const SizedBox(height: 16),
                     _buildGoogleButton(),
-                    const SizedBox(height: 12),
-                    _buildAppleButton(),
+                    // Sign in with Apple chỉ có trên iOS — Android không hỗ trợ.
+                    if (Platform.isIOS) ...[
+                      const SizedBox(height: 12),
+                      _buildAppleButton(),
+                    ],
                     const SizedBox(height: 20),
                     _buildRegisterLink(),
                   ],
